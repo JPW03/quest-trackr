@@ -5,6 +5,7 @@ Work in progress video game backlog manager with a twist: you can set personal g
 It will allow you to make the most out of the games you play, rather than transforming your backlog into a checklist of games to complete like other websites.
 
 All designs for the website are managed on our [Figma](https://www.figma.com/files/project/102626058/Designs?fuid=1270712706134823022)
+
 ---
 
 To start your Phoenix server:
