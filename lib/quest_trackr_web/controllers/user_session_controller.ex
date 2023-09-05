@@ -40,6 +40,13 @@ defmodule QuestTrackrWeb.UserSessionController do
     end
   end
 
+  def delete(conn, %{"_action" => "permanently_delete"}) do
+    conn
+    |> put_flash(:info, "Account deleted successfully.")
+    |> UserAuth.log_out_user()
+    |> redirect(to: ~p"/")
+  end
+
   def delete(conn, _params) do
     conn
     |> put_flash(:info, "Logged out successfully.")

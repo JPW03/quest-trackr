@@ -94,6 +94,29 @@ defmodule QuestTrackrWeb.UserSettingsLive do
           </:actions>
         </.simple_form>
       </div>
+      <div>
+        <.simple_form
+          for={@delete_form}
+          id="delete_form"
+          action={~p"/users/log_out?_action=permanently_delete"}
+          method="delete"
+          phx-submit="delete_user"
+          phx-trigger-action={@delete_trigger_submit}
+        >
+          <.input
+            field={@delete_form[:current_password]}
+            name="current_password"
+            type="password"
+            label="Current password"
+            id="current_password_for_password"
+            value={@current_password}
+            required
+          />
+          <:actions>
+            <.button phx-disable-with="Changing...">Delete Account</.button>
+          </:actions>
+        </.simple_form>
+      </div>
     </div>
     """
   end
@@ -116,6 +139,7 @@ defmodule QuestTrackrWeb.UserSettingsLive do
     username_changeset = Accounts.change_user_username(user)
     email_changeset = Accounts.change_user_email(user)
     password_changeset = Accounts.change_user_password(user)
+    delete_changeset = Accounts.change_user_registration(user)
 
     socket =
       socket
@@ -127,8 +151,10 @@ defmodule QuestTrackrWeb.UserSettingsLive do
       |> assign(:username_form, to_form(username_changeset))
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
+      |> assign(:delete_form, to_form(delete_changeset))
       |> assign(:username_trigger_submit, false)
       |> assign(:password_trigger_submit, false)
+      |> assign(:delete_trigger_submit, false)
 
     {:ok, socket}
   end
@@ -222,6 +248,21 @@ defmodule QuestTrackrWeb.UserSettingsLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :email_form, to_form(Map.put(changeset, :action, :insert)))}
+    end
+  end
+
+  def handle_event("delete_user", params, socket) do
+    %{"current_password" => password} = params
+    user = socket.assigns.current_user
+
+    case Accounts.delete_user(user, password) do
+      {:ok, _user} ->
+        delete_form = to_form(Accounts.change_user_registration(user))
+
+        {:noreply, assign(socket, delete_trigger_submit: true, delete_form: delete_form)}
+
+      {:error, _changeset} ->
+        {:noreply, socket}
     end
   end
 end

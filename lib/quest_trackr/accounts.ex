@@ -423,4 +423,27 @@ defmodule QuestTrackr.Accounts do
       {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
+
+  @doc """
+  Deletes the user given its password
+
+  ## Examples
+
+      iex> delete_user(user, "password")
+      {:ok, %User{}}
+
+      iex> delete_user(user, "wrong password")
+      {:error, user}
+  """
+  def delete_user(user, password) do
+    if User.valid_password?(user, password) do
+      Repo.delete(user)
+      |> case do
+        {:ok, user} -> {:ok, user}
+        {:error, _changeset} -> {:error, user}
+      end
+    else
+      {:error, user}
+    end
+  end
 end
