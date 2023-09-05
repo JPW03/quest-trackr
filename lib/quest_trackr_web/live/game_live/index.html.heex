@@ -1,0 +1,46 @@
+<.header>
+  Listing Games in library
+  <:actions>
+    <.link patch={~p"/games_in_library/new"}>
+      <.button>New Game</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.table
+  id="games_in_library"
+  rows={@streams.games_in_library}
+  row_click={fn {_id, game} -> JS.navigate(~p"/games_in_library/#{game}") end}
+>
+  <:col :let={{_id, game}} label="Ownership status"><%= game.ownership_status %></:col>
+  <:col :let={{_id, game}} label="Play status"><%= game.play_status %></:col>
+  <:col :let={{_id, game}} label="Bought for"><%= game.bought_for %></:col>
+  <:col :let={{_id, game}} label="Rating"><%= game.rating %></:col>
+  <:col :let={{_id, game}} label="Date added"><%= game.date_added %></:col>
+  <:col :let={{_id, game}} label="Last updated"><%= game.last_updated %></:col>
+  <:action :let={{_id, game}}>
+    <div class="sr-only">
+      <.link navigate={~p"/games_in_library/#{game}"}>Show</.link>
+    </div>
+    <.link patch={~p"/games_in_library/#{game}/edit"}>Edit</.link>
+  </:action>
+  <:action :let={{id, game}}>
+    <.link
+      phx-click={JS.push("delete", value: %{id: game.id}) |> hide("##{id}")}
+      data-confirm="Are you sure?"
+    >
+      Delete
+    </.link>
+  </:action>
+</.table>
+
+<.modal :if={@live_action in [:new, :edit]} id="game-modal" show on_cancel={JS.patch(~p"/games_in_library")}>
+  <.live_component
+    module={QuestTrackrWeb.GameLive.FormComponent}
+    id={@game.id || :new}
+    title={@page_title}
+    action={@live_action}
+    game={@game}
+    patch={~p"/games_in_library"}
+  />
+</.modal>
