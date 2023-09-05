@@ -1,2 +1,24 @@
-# quest-trackr
-Video game backlog organisor website for people who want to make the most out of their backlog.
+# QuestTrackr
+
+Work in progress video game backlog manager with a twist: you can set personal goals (a.k.a Quests) to complete in those games.
+
+It will allow you to make the most out of the games you play, rather than transforming your backlog into a checklist of games to complete like other websites.
+
+---
+
+To start your Phoenix server:
+
+  * Run `mix setup` to install and setup dependencies
+  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+
+Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+
+Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+
+## Learn more
+
+  * Official website: https://www.phoenixframework.org/
+  * Guides: https://hexdocs.pm/phoenix/overview.html
+  * Docs: https://hexdocs.pm/phoenix
+  * Forum: https://elixirforum.com/c/phoenix-forum
+  * Source: https://github.com/phoenixframework/phoenix
