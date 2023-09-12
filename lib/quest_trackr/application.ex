@@ -17,10 +17,15 @@ defmodule QuestTrackr.Application do
       # Start Finch
       {Finch, name: QuestTrackr.Finch},
       # Start the Endpoint (http/https)
-      QuestTrackrWeb.Endpoint
+      QuestTrackrWeb.Endpoint,
       # Start a worker by calling: QuestTrackr.Worker.start_link(arg)
       # {QuestTrackr.Worker, arg}
+      # Start the IGDB interface
+      {QuestTrackr.IGDB, %QuestTrackr.IGDB.Token{}}
     ]
+
+    # Start the HTTPoison client
+    HTTPoison.start()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

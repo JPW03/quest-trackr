@@ -17,7 +17,7 @@ defmodule QuestTrackr.Library.Game do
     belongs_to :library, QuestTrackr.Library.Settings
     belongs_to :game, QuestTrackr.Data.Game
     belongs_to :platform, QuestTrackr.Data.Platform
-    belongs_to :original_platform, QuestTrackr.Data.Platform
+    belongs_to :original_platform_if_emulated, QuestTrackr.Data.Platform
     belongs_to :bundle, QuestTrackr.Library.Game
 
     timestamps()
@@ -27,6 +27,6 @@ defmodule QuestTrackr.Library.Game do
   def changeset(game, attrs) do
     game
     |> cast(attrs, [:ownership_status, :play_status, :bought_for, :rating, :date_added, :last_updated])
-    |> validate_required([:ownership_status, :play_status, :bought_for, :rating, :date_added, :last_updated])
+    |> validate_required([:ownership_status, :play_status])
   end
 end
