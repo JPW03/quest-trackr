@@ -187,6 +187,7 @@ defmodule QuestTrackr.IGDB do
     bundles
     name alternative_names first_release_date
     keywords themes franchise franchises parent_game cover
+    updated_at
   )
   # Looking into 'tags' (Tag Numbers) may be helpful for search speeds.
 
@@ -221,31 +222,51 @@ defmodule QuestTrackr.IGDB do
     ) # for some reason IGDB returns a list of size (limit - 1)
   end
 
-  @doc """
-  Searches IGDB's Keywords using a given ID. Returns only the name attribute if found.
-  """
-  def get_keyword_by_id(id) do
-    query("#{@base_url}keywords/", "fields name; where id = #{id};")
+  defp list_to_igdb_query_string(list) do
+    "(" <> Enum.join(list, ",") <> ")"
   end
 
   @doc """
-  Searches IGDB's Themes using a given ID. Returns only the name attribute if found.
+  Searches IGDB's Keywords using a given ID list.
+  Returns only the name attribute of each found.
   """
-  def get_theme_by_id(id) do
-    query("#{@base_url}themes/", "fields name; where id = #{id};")
+  def get_keyword_by_id_list(id_list) do
+    case query("#{@base_url}keywords/", "fields name; where id = #{list_to_igdb_query_string(id_list)};") do
+      {:ok, keywords} -> {:ok, Enum.map(keywords, fn (%{"name" => name}) -> name end)}
+      {status, body} -> {status, body}
+    end
+  end
+
+  @doc """
+  Searches IGDB's Themes using a given ID list.
+  Returns only the name attribute of each found.
+  """
+  def get_theme_by_id_list(id_list) do
+    case query("#{@base_url}themes/", "fields name; where id = #{list_to_igdb_query_string(id_list)};") do
+      {:ok, themes} -> {:ok, Enum.map(themes, fn (%{"name" => name}) -> name end)}
+      {status, body} -> {status, body}
+    end
   end
 
   @doc """
   Searches IGDB's Franchises using a given ID. Returns only the name attribute if found.
   """
   def get_franchise_by_id(id) do
-    query("#{@base_url}franchises/", "fields name; where id = #{id};")
+    case query("#{@base_url}franchises/", "fields name; where id = #{id};") do
+      {:ok, []} -> {:error, "Franchise not found."}
+      {:ok, [%{"name" => name}]} -> {:ok, name}
+      {status, body} -> {status, body}
+    end
   end
   @doc """
-  Searches IGDB's Franchises using a given ID. Returns only the name attribute if found.
+  Searches IGDB's Alternative Names using a given ID list.
+  Returns only the name attribute of each found.
   """
-  def get_alternative_name_by_id(id) do
-    query("#{@base_url}alternative_names/", "fields name; where id = #{id};")
+  def get_alternative_name_by_id_list(id_list) do
+    case query("#{@base_url}alternative_names/", "fields name; where id = #{list_to_igdb_query_string(id_list)};") do
+      {:ok, alt_names} -> {:ok, Enum.map(alt_names, fn (%{"name" => name}) -> name end)}
+      {status, body} -> {status, body}
+    end
   end
 
   # Note that the cover art is a .png, the thumbnail is a .jpg
@@ -269,7 +290,7 @@ defmodule QuestTrackr.IGDB do
   """
   def get_cover_thumbnail_url(id) do
     case get_cover_by_id(id) do
-      {:ok, %{"image_id" => image_id}} ->
+      {:ok, [%{"image_id" => image_id}]} ->
         {:ok, "#{@cover_art_base_url}#{image_id}.png"}
       {status, body} ->
         {status, body}
@@ -283,13 +304,18 @@ defmodule QuestTrackr.IGDB do
   @platform_expected_fields ~w(
     id name abbreviation alternative_name
     platform_logo
+    updated_at
   )
 
   @doc """
   Retrieves a platform by its ID.
   """
   def get_platform_by_id(id) do
-    query("#{@base_url}platforms/", "fields #{Enum.join(@platform_expected_fields, ",")}; where id = #{id};")
+    case query("#{@base_url}platforms/", "fields #{Enum.join(@platform_expected_fields, ",")}; where id = #{id};") do
+      {:ok, []} -> {:error, "Platform not found."}
+      {:ok, [platform]} -> {:ok, platform}
+      {status, body} -> {status, body}
+    end
   end
 
   #...again the images are .png ('t_thumb' versions are .jpg)
