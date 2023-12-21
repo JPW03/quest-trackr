@@ -9,8 +9,6 @@ defmodule QuestTrackr.IGDB do
   @base_url "https://api.igdb.com/v4/"
   @token_url "https://id.twitch.tv/oauth2/token"
 
-  @game_expected_fields ~w()
-
   defmodule Token do
     defstruct token: "", expires_at: 0
   end
@@ -59,7 +57,7 @@ defmodule QuestTrackr.IGDB do
 
   def start_link(_default), do: GenServer.start_link(__MODULE__, %Token{}, name: __MODULE__)
 
-  ## DEV-SIDE API FUNCTIONS
+  ## MIDDLEWARE FUNCTIONS
 
   @doc """
   Returns the current IGDB access token, or a new one is the current has expired.
@@ -90,7 +88,7 @@ defmodule QuestTrackr.IGDB do
   """
   def query(url, body \\ "") do
     client_id = Application.fetch_env!(:quest_trackr, QuestTrackr.IGDB)[:client_id]
-    IO.inspect Application.fetch_env!(:quest_trackr, QuestTrackr.IGDB)
+    # IO.inspect Application.fetch_env!(:quest_trackr, QuestTrackr.IGDB)
 
     headers = [
       {"Content-Type", "application/json"},
@@ -98,17 +96,220 @@ defmodule QuestTrackr.IGDB do
       {"Client-ID", client_id},
       {"Authorization", get_access_token()}
     ]
-    IO.inspect headers
+    # IO.inspect headers
 
     HTTPoison.start()
 
-    case HTTPoison.post(url, body, headers) do
+    response = HTTPoison.post(url, body, headers)
+    # IO.inspect(response)
+    case response do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         {:ok, Jason.decode!(body)}
       {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
-        {:error, "#{status_code}: #{Jason.decode!(body)["message"]}"}
+        message = case Jason.decode(body) do
+          # For @base_url errors
+          {:ok, [%{"title" => title, "cause" => cause}]} -> "#{title}: #{cause}"
+          # For @token_url errors
+          {:ok, %{"message" => message}} -> message
+          {:ok, _} -> "(unknown error)"
+          # If the body isn't JSON
+          {:error, _} -> "(problem decoding body)"
+        end
+        {:error, "#{status_code}: #{message}}"}
       {:error, %HTTPoison.Error{reason: reason}} ->
         {:error, reason}
     end
   end
+
+  ## GAME API FUNCTIONS
+
+  @categories [
+    {0, :main_game},
+    {1, :dlc_addon},
+    {2, :expansion},
+    {3, :bundle},
+    {4, :standalone_expansion},
+    {5, :mod},
+    {6, :episode},
+    {7, :season},
+    {8, :remake},
+    {9, :remaster},
+    {10, :expanded_game},
+    {11, :port},
+    {12, :fork},
+    {13, :pack},
+    {14, :update}
+  ]
+
+  @dlc_categories [:dlc_addon, :expansion, :standalone_expansion, :episode, :pack]
+  @bundle_categories [:bundle]
+  @excluded_categories [:mod, :update, :season]
+
+  defp get_accepted_categories_string do
+    "(" <>
+    (@categories
+    |> Enum.filter(fn (c) ->
+      Enum.count(@excluded_categories, &(&1 == elem(c, 1))) == 0
+    end)
+    |> Enum.map(&(elem(&1, 0)))
+    |> Enum.join(","))
+    <> ")"
+  end
+
+  @status [
+    {0, :released}, # Released games don't have a 'status' attribute (?)
+    {2, :alpha}, # No 0 to 2 is not a mistake, this is what the docs say
+    {3, :beta},
+    {4, :early_access},
+    {5, :offline},
+    {6, :cancelled},
+    {7, :rumored},
+    {8, :delisted}
+  ]
+
+  @excluded_status [:rumored, :cancelled]
+
+  defp get_accepted_statuses_string do
+    "(" <>
+    (@status
+    |> Enum.filter(fn (s) ->
+      Enum.count(@excluded_status, &(&1 == elem(s, 1))) == 0
+    end)
+    |> Enum.map(&(elem(&1, 0)))
+    |> Enum.join(","))
+    <> ")"
+  end
+
+  @game_expected_fields ~w(
+    id category status
+    platforms
+    dlcs expansions standalone_expansions
+    bundles
+    name alternative_names first_release_date
+    keywords themes franchise franchises parent_game cover
+  )
+  # Looking into 'tags' (Tag Numbers) may be helpful for search speeds.
+
+  @doc """
+  Returns a game from the given ID.
+  """
+  def get_game_by_id(id) do
+    case query("#{@base_url}games/", construct_game_query("id = #{id};")) do
+      {:ok, []} -> {:error, "Game not found or not valid."}
+      {:ok, [game]} -> {:ok, game}
+      {status, body} -> {status, body}
+    end
+  end
+
+  defp construct_game_query(condition) do
+    "fields #{Enum.join(@game_expected_fields, ",")};" <>
+    " where category = #{get_accepted_categories_string()}" <>
+    " & (status = #{get_accepted_statuses_string()}" <>
+    " | status = null)" <>
+    " & #{condition}" <>
+    ";"
+  end
+
+  @doc """
+  Returns a list of games containing the name given.
+  The list will be a length equal to n_of_results, or 50 if n_of_results is not given.
+  """
+  def search_games_by_name(name, n_of_results \\ 50) do
+    query(
+      "#{@base_url}games/",
+      "fields *; search \"#{name}\"; limit #{n_of_results + 1};"
+    ) # for some reason IGDB returns a list of size (limit - 1)
+  end
+
+  @doc """
+  Searches IGDB's Keywords using a given ID. Returns only the name attribute if found.
+  """
+  def get_keyword_by_id(id) do
+    query("#{@base_url}keywords/", "fields name; where id = #{id};")
+  end
+
+  @doc """
+  Searches IGDB's Themes using a given ID. Returns only the name attribute if found.
+  """
+  def get_theme_by_id(id) do
+    query("#{@base_url}themes/", "fields name; where id = #{id};")
+  end
+
+  @doc """
+  Searches IGDB's Franchises using a given ID. Returns only the name attribute if found.
+  """
+  def get_franchise_by_id(id) do
+    query("#{@base_url}franchises/", "fields name; where id = #{id};")
+  end
+  @doc """
+  Searches IGDB's Franchises using a given ID. Returns only the name attribute if found.
+  """
+  def get_alternative_name_by_id(id) do
+    query("#{@base_url}alternative_names/", "fields name; where id = #{id};")
+  end
+
+  # Note that the cover art is a .png, the thumbnail is a .jpg
+  @cover_art_base_url "https://images.igdb.com/igdb/image/upload/t_cover_big/"
+  @cover_thumbnail_base_url "https://images.igdb.com/igdb/image/upload/t_thumb/"
+
+  @doc """
+  Returns the cover art URL for a given ID
+  """
+  def get_cover_art_url(id) do
+    case get_cover_by_id(id) do
+      {:ok, [%{"image_id" => image_id}]} ->
+        {:ok, "#{@cover_art_base_url}#{image_id}.png"}
+      {status, body} ->
+        {status, body}
+    end
+  end
+
+  @doc """
+  Returns the thumbnail version of the cover art for a given ID
+  """
+  def get_cover_thumbnail_url(id) do
+    case get_cover_by_id(id) do
+      {:ok, %{"image_id" => image_id}} ->
+        {:ok, "#{@cover_art_base_url}#{image_id}.png"}
+      {status, body} ->
+        {status, body}
+    end
+  end
+
+  defp get_cover_by_id(id) do
+    query("#{@base_url}covers/", "fields image_id; where id = #{id};")
+  end
+
+  @platform_expected_fields ~w(
+    id name abbreviation alternative_name
+    platform_logo
+  )
+
+  @doc """
+  Retrieves a platform by its ID.
+  """
+  def get_platform_by_id(id) do
+    query("#{@base_url}platforms/", "fields #{Enum.join(@platform_expected_fields, ",")}; where id = #{id};")
+  end
+
+  #...again the images are .png ('t_thumb' versions are .jpg)
+  @platform_logo_art_url "https://images.igdb.com/igdb/image/upload/t_logo_med/"
+
+  @doc """
+  Returns the platform logo URL for a given ID.
+  The URL points to the 't_logo_med' version of the logo, as opposed to the smaller 't_thumb' version returned by the API.
+  """
+  def get_platform_logo_url(id) do
+    case get_platform_logo_by_id(id) do
+      {:ok, [%{"image_id" => image_id}]} ->
+        {:ok, "#{@platform_logo_art_url}#{image_id}.png"}
+      {status, body} ->
+        {status, body}
+    end
+  end
+
+  defp get_platform_logo_by_id(id) do
+    query("#{@base_url}platform_logos/", "fields image_id; where id = #{id};")
+  end
+
 end
