@@ -1,10 +1,12 @@
 defmodule QuestTrackr.Data do
   @moduledoc """
-  The Data context.
+  The Data context provides functions to interact with the database for retrieving
+  raw data about video games or platforms.
   """
 
   import Ecto.Query, warn: false
   alias QuestTrackr.Repo
+  alias QuestTrackr.IGDB
 
   alias QuestTrackr.Data.Platform
 
@@ -38,68 +40,65 @@ defmodule QuestTrackr.Data do
   def get_platform!(id), do: Repo.get!(Platform, id)
 
   @doc """
-  Creates a platform.
-
-  ## Examples
-
-      iex> create_platform(%{field: value})
-      {:ok, %Platform{}}
-
-      iex> create_platform(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  Get a platform from its IGDB ID.
+  If an entry doesn't exist for that platform, a new one is created.
   """
-  def create_platform(attrs \\ %{}) do
-    %Platform{}
-    |> Platform.changeset(attrs)
-    |> Repo.insert()
+  def get_platform_by_igdb_id(igdb_id) do
+    case Repo.get_by(Platform, igdb_id: igdb_id) do
+      nil ->
+        create_platform(igdb_id)
+
+      platform ->
+        validate_platform_up_to_date(platform)
+    end
   end
 
   @doc """
-  Updates a platform.
-
-  ## Examples
-
-      iex> update_platform(platform, %{field: new_value})
-      {:ok, %Platform{}}
-
-      iex> update_platform(platform, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  Creates a platform from an IGDB platform.
   """
-  def update_platform(%Platform{} = platform, attrs) do
+  def create_platform(igdb_id) do
+    case IGDB.get_platform_by_id(igdb_id) do
+      {:ok, platform} ->
+        %Platform{}
+        |> Platform.changeset(convert_platform_igdb_to_db(platform))
+        |> Repo.insert()
+
+      {:error, message} ->
+        {:error, message}
+    end
+  end
+
+  @doc """
+  Updates a platform if its IGDB entry has been changed since previous update.
+  """
+  def validate_platform_up_to_date(%Platform{} = platform) do
+    case IGDB.get_platform_by_id(platform.igdb_id) do
+      {:ok, new_platform} ->
+        if platform.last_updated < DateTime.from_unix(new_platform["updated_at"]) do
+          platform
+          |> Platform.changeset(convert_platform_igdb_to_db(new_platform))
+          |> Repo.update()
+        else
+          {:ok, platform}
+        end
+
+      {:error, message} ->
+        {:error, message}
+    end
+  end
+
+  defp convert_platform_igdb_to_db(platform) do
     platform
-    |> Platform.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Deletes a platform.
-
-  ## Examples
-
-      iex> delete_platform(platform)
-      {:ok, %Platform{}}
-
-      iex> delete_platform(platform)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_platform(%Platform{} = platform) do
-    Repo.delete(platform)
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking platform changes.
-
-  ## Examples
-
-      iex> change_platform(platform)
-      %Ecto.Changeset{data: %Platform{}}
-
-  """
-  def change_platform(%Platform{} = platform, attrs \\ %{}) do
-    Platform.changeset(platform, attrs)
+    |> Map.put("igdb_id", Map.get(platform, "id"))
+    |> Map.delete("id")
+    |> Map.put("last_updated", DateTime.utc_now())
+    |> Map.delete("updated_at")
+    |> Map.put("logo_image_url", case IGDB.get_platform_logo_url(Map.get(platform, "platform_logo")) do
+      {:ok, url} -> url
+      {:error, _} -> ""
+    end
+    )
+    |> Map.delete("platform_logo")
   end
 
   alias QuestTrackr.Data.Game
@@ -134,18 +133,9 @@ defmodule QuestTrackr.Data do
   def get_game!(id), do: Repo.get!(Game, id)
 
   @doc """
-  Creates a game.
-
-  ## Examples
-
-      iex> create_game(%{field: value})
-      {:ok, %Game{}}
-
-      iex> create_game(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  Creates a game from an IGDB game.
   """
-  def create_game(attrs \\ %{}) do
+  def create_game_from_igdb(attrs \\ %{}) do
     %Game{}
     |> Game.changeset(attrs)
     |> Repo.insert()
@@ -169,32 +159,4 @@ defmodule QuestTrackr.Data do
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a game.
-
-  ## Examples
-
-      iex> delete_game(game)
-      {:ok, %Game{}}
-
-      iex> delete_game(game)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_game(%Game{} = game) do
-    Repo.delete(game)
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking game changes.
-
-  ## Examples
-
-      iex> change_game(game)
-      %Ecto.Changeset{data: %Game{}}
-
-  """
-  def change_game(%Game{} = game, attrs \\ %{}) do
-    Game.changeset(game, attrs)
-  end
 end
