@@ -51,7 +51,7 @@ defmodule QuestTrackr.Data do
       platform -> check_for_update_platform(platform)
     end) do
       {:ok, platform} -> platform
-      {:error, message} -> {:error, message}
+      {:error, _} -> nil
     end
   end
 
@@ -174,6 +174,15 @@ defmodule QuestTrackr.Data do
 
   If it doesn't exist, a new one is created from IGDB.
 
+  Options (all `false` by default):
+  * `:parent_game` - The game is preloaded with the parent_game association
+  * `:dlcs` - The game is preloaded with the dlcs association
+  * `:included_games` - The game is preloaded with the included_games association
+  * `:bundles` - The game is preloaded with the bundles association
+  * `:platforms` - The game is preloaded with the platforms association
+
+  If the game is newly created, the "parent_game", "included_games" and "platforms" are assumed to be true.
+
   ## Examples
 
       # Non-existant game
@@ -183,18 +192,55 @@ defmodule QuestTrackr.Data do
       # Existant game
       iex> get_game(456)
       {:old, %Game{}}
-  """
-  def get_game(id) do
-    case Repo.get(Game, id) do
-      nil ->
-        case create_game(id) do
-          {:ok, game} -> {:new, game}
-          {:error, message} -> {:error, message}
-        end
 
-      game -> {:old, game}
+      # Invalid ID
+      iex> get_game("abc")
+      {:error, "Invalid ID"}
+  """
+  def get_game(id, opts \\ %{}) do
+    if Repo.exists?(from g in Game, where: g.id == ^id) do
+      {:old,
+      Repo.get(Game, id)
+      |> handle_options(opts)}
+    else
+      case create_game(id) do
+        {:ok, game} -> {:new, game}
+        {:error, message} -> {:error, message}
+      end
+      # If the game didn't already exist, it's impossible for it
+      #  to have any associated bundles or DLCs
+      #   (when a bundle is created, its included games are also created/
+      #    when a DLC is created, its parent game is also created)
+      # So we don't need to handle the options
     end
   end
+
+  defp handle_options(game, %{parent_game: true} = opts) do
+    game
+    |> Repo.preload(:parent_game)
+    |> handle_options(Map.delete(opts, :parent_game))
+  end
+  defp handle_options(game, %{dlcs: true} = opts) do
+    game
+    |> Repo.preload(:dlcs)
+    |> handle_options(Map.delete(opts, :dlcs))
+  end
+  defp handle_options(game, %{included_games: true} = opts) do
+    game
+    |> Repo.preload(:included_games)
+    |> handle_options(Map.delete(opts, :included_games))
+  end
+  defp handle_options(game, %{bundles: true} = opts) do
+    game
+    |> Repo.preload(:bundles)
+    |> handle_options(Map.delete(opts, :bundles))
+  end
+  defp handle_options(game, %{platforms: true} = opts) do
+    game
+    |> Repo.preload(:platforms)
+    |> handle_options(Map.delete(opts, :platforms))
+  end
+  defp handle_options(game, _opts), do: game
 
   @doc """
   Creates a game from the IGDB API.
@@ -366,7 +412,15 @@ defmodule QuestTrackr.Data do
   Returns a list of DLCs for a game.
   """
   def get_dlcs(game) do
-    # TODO
+    case IGDB.get_dlc_games_of(game.id) do
+      {:ok, dlcs} -> dlcs
+      {:error, _} -> []
+    end
+    |> Enum.map(&(case get_game(&1["id"]) do
+      {:error, _} -> nil
+      {_, game} -> game
+    end))
+    |> Enum.filter(&(&1 != nil))
   end
 
   @doc """

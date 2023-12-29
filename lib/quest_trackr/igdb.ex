@@ -164,14 +164,11 @@ defmodule QuestTrackr.IGDB do
   @excluded_categories [:mod, :update, :season]
 
   defp get_accepted_categories_string do
-    "(" <>
-    (@categories
+    list_to_igdb_query_string(@categories
     |> Enum.filter(fn (c) ->
       Enum.count(@excluded_categories, &(&1 == elem(c, 1))) == 0
     end)
-    |> Enum.map(&(elem(&1, 0)))
-    |> Enum.join(","))
-    <> ")"
+    |> Enum.map(&(elem(&1, 0))))
   end
 
   @status [
@@ -188,14 +185,11 @@ defmodule QuestTrackr.IGDB do
   @excluded_status [:rumored, :cancelled]
 
   defp get_accepted_statuses_string do
-    "(" <>
-    (@status
+    list_to_igdb_query_string(@status
     |> Enum.filter(fn (s) ->
       Enum.count(@excluded_status, &(&1 == elem(s, 1))) == 0
     end)
-    |> Enum.map(&(elem(&1, 0)))
-    |> Enum.join(","))
-    <> ")"
+    |> Enum.map(&(elem(&1, 0))))
   end
 
   @game_expected_fields ~w(
@@ -226,6 +220,17 @@ defmodule QuestTrackr.IGDB do
   """
   def get_games_included_in(game_id) do
     case query("#{@base_url}games/", construct_game_query("bundles = (#{game_id})")) do
+      {:ok, games} -> {:ok, games}
+      {status, body} -> {status, body}
+    end
+  end
+
+  @doc """
+  Returns the list of games that are DLCs of the given game.
+  i.e. games where its 'parent_game' is the given game.
+  """
+  def get_dlc_games_of(game_id) do
+    case query("#{@base_url}games/", construct_game_query("parent_game = #{game_id}")) do
       {:ok, games} -> {:ok, games}
       {status, body} -> {status, body}
     end
@@ -349,6 +354,7 @@ defmodule QuestTrackr.IGDB do
     case query("#{@base_url}platforms/", "fields #{Enum.join(@platform_expected_fields, ",")}; where id = #{id};") do
       {:ok, []} -> {:error, "Platform not found."}
       {:ok, [platform]} -> {:ok, platform}
+      {:error, :timeout} -> get_platform_by_id(id)
       {status, body} -> {status, body}
     end
   end
