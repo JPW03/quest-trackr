@@ -8,7 +8,6 @@ defmodule QuestTrackr.Data.Game do
     field :collection, :boolean, default: false
     field :dlc, :boolean, default: false
     field :franchise_name, :string
-    field :game_version_numbers, {:array, :integer}
     field :keywords, {:array, :string}
     field :name, :string
     field :release_date, :naive_datetime
@@ -18,7 +17,7 @@ defmodule QuestTrackr.Data.Game do
 
     many_to_many :platforms, QuestTrackr.Data.Platform, join_through: "games_platforms", on_replace: :delete
 
-    has_many :dlcs, QuestTrackr.Data.Game, references: :parent_game_id
+    has_many :dlcs, QuestTrackr.Data.Game, foreign_key: :parent_game_id
 
     many_to_many :bundles, QuestTrackr.Data.Game,
       join_through: "bundles",
@@ -35,7 +34,7 @@ defmodule QuestTrackr.Data.Game do
   @doc false
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:id, :name, :dlc, :collection, :franchise_name, :game_version_numbers, :artwork_url, :release_date])
+    |> cast(attrs, [:id, :name, :dlc, :collection, :alternative_names, :keywords, :franchise_name, :artwork_url, :thumbnail_url, :release_date])
     |> validate_required([:id, :name, :dlc, :collection])
     |> validate_if_dlc()
     |> validate_if_collection()

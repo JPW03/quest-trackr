@@ -254,7 +254,7 @@ defmodule QuestTrackr.IGDB do
   defp list_to_igdb_query_string([_|_] = list) do
     "(" <> Enum.join(list, ",") <> ")"
   end
-  defp list_to_igdb_query_string(list), do: list
+  defp list_to_igdb_query_string(not_a_list), do: not_a_list
 
   @doc """
   Searches IGDB's Keywords using a given ID list.
@@ -282,6 +282,8 @@ defmodule QuestTrackr.IGDB do
   Searches IGDB's Franchises using a given ID or ID list.
   Returns only the name attribute of the first franchise found.
   """
+  def get_franchise_by_id(nil), do: {:error, "No ID provided."}
+  def get_franchise_by_id([]), do: {:error, "No ID provided."}
   def get_franchise_by_id([ first_id |_]), do: get_franchise_by_id(first_id)
   def get_franchise_by_id(id) do
     case query("#{@base_url}franchises/", "fields name; where id = #{id};") do

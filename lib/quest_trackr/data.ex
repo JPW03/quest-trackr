@@ -39,11 +39,6 @@ defmodule QuestTrackr.Data do
   """
   def get_platform!(id) do
     Repo.get!(Platform, id)
-    |> Repo.preload(:included_games)
-    |> Repo.preload(:bundles)
-    |> Repo.preload(:dlcs)
-    |> Repo.preload(:parent_game)
-    |> Repo.preload(:platforms)
   end
 
   @doc """
@@ -51,13 +46,22 @@ defmodule QuestTrackr.Data do
   If an entry doesn't exist for that platform, a new one is created.
   """
   def get_platform_by_igdb_id(igdb_id) do
-    case Repo.get_by(Platform, igdb_id: igdb_id) do
-      nil ->
-        create_platform(igdb_id)
-
-      platform ->
-        check_for_update_platform(platform)
+    case (case Repo.get_by(Platform, igdb_id: igdb_id) do
+      nil -> create_platform(igdb_id)
+      platform -> check_for_update_platform(platform)
+    end) do
+      {:ok, platform} -> platform
+      {:error, message} -> {:error, message}
     end
+  end
+
+  @doc """
+  Get a list of platforms from a list of IGDB IDs.
+  If an entry doesn't exist for a platform, a new one is created.
+  """
+  def get_platforms_by_igdb_id_list(igdb_id_list) do
+    igdb_id_list
+    |> Enum.map(&get_platform_by_igdb_id/1)
   end
 
   @doc """
@@ -89,7 +93,7 @@ defmodule QuestTrackr.Data do
       case IGDB.get_platform_by_id(platform.igdb_id) do
         {:ok, new_platform} ->
           if platform.updated_at < DateTime.from_unix(new_platform["updated_at"]) do
-            update_platform(platform, convert_game_igdb_to_db(new_platform))
+            update_platform(platform, convert_platform_igdb_to_db(new_platform))
           else
             update_platform(platform, %{"updated_at" => DateTime.utc_now()})
           end
@@ -135,47 +139,24 @@ defmodule QuestTrackr.Data do
   alias QuestTrackr.Data.Game
 
   @doc """
-  Returns the list of games.
+  Returns the list of games from a search term.
+  Search term is compared to the game's name, alternative names and keywords.
 
   ## Examples
 
-      iex> list_games()
+      iex> search_games("Halo")
       [%Game{}, ...]
 
   """
-  def list_games do
-    Repo.all(Game)
-  end
-
-  @doc """
-  Given a search term, returns the list of games that match the search term.
-
-  The search term is matched against the game's name, and its keywords.
-  """
-  def search_games(search_term) do
-    results = Repo.all(
-      from g in Game,
-      where: ilike(g.name, ^"%#{search_term}%")
-    )
-
+  def search_games do
     # TODO
-    if length results < 50 do
-      case IGDB.search_games_by_name(search_term) do
-        {:ok, games} ->
-          results ++ Enum.map(games, fn game ->
-            create_game(convert_game_igdb_to_db(game))
-          end)
-
-        {:error, _} ->
-          results
-      end
-    end
+    Repo.all(Game)
   end
 
   @doc """
   Gets a single game.
 
-  Creates the Game if the Game does not exist.
+  (Strict) Raises `Ecto.NoResultsError` if the Game does not exist.
 
   ## Examples
 
@@ -186,72 +167,172 @@ defmodule QuestTrackr.Data do
       ** (Ecto.NoResultsError)
 
   """
+  def get_game!(id), do: Repo.get!(Game, id)
+
+  @doc """
+  Gets a single game.
+
+  If it doesn't exist, a new one is created from IGDB.
+
+  ## Examples
+
+      # Non-existant game
+      iex> get_game(123)
+      {:new, %Game{}}
+
+      # Existant game
+      iex> get_game(456)
+      {:old, %Game{}}
+  """
   def get_game(id) do
-    preload_parent_game = fn game ->
-      if Map.get(game || %{}, "dlc") do
-        Repo.preload(game, :parent_game)
-      else
-        game
-      end
-    end
-
-    preload_included_games = fn game ->
-      if Map.get(game || %{}, "collection") do
-        Repo.preload(game, :included_games)
-      else
-        game
-      end
-    end
-
-    result = Repo.get_by(Game, id: id)
-    |> Repo.preload(:platforms)
-    |> Repo.preload(:bundles)
-    |> Repo.preload(:dlcs)
-    |> preload_parent_game.()
-    |> preload_included_games.()
-
-    case result do
+    case Repo.get(Game, id) do
       nil ->
-        create_game(id)
+        case create_game(id) do
+          {:ok, game} -> {:new, game}
+          {:error, message} -> {:error, message}
+        end
 
-      game ->
-        check_for_update_game(game)
+      game -> {:old, game}
     end
   end
 
   @doc """
-  Creates a game from an IGDB game.
+  Creates a game from the IGDB API.
+
+  ## Examples
+
+      iex> create_game(%{field: value})
+      {:ok, %Game{}}
+
+      iex> create_game(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
   """
   def create_game(igdb_id) do
-    case IGDB.get_game_by_id(igdb_id) do
-      {:ok, game} ->
-        %Game{}
-        |> create_full_game_changeset_from_igdb(game)
-        |> Repo.insert()
+    attrs = convert_game_igdb_to_db(IGDB.get_game_by_id(igdb_id))
+    IO.inspect attrs
 
-      {:error, message} ->
-        {:error, message}
+    %Game{}
+    |> Game.changeset(attrs)
+    |> handle_changeset_assocs(attrs)
+    |> Repo.insert()
+  end
+
+  defp convert_game_igdb_to_db({:error, _}), do: raise "IGDB API error"
+  defp convert_game_igdb_to_db({:ok, igdb_game}) do
+    franchise_id = Map.get(igdb_game, "franchise") || List.first(Map.get(igdb_game, "franchises") || [], [])
+    category = Map.get(igdb_game, "category")
+
+    # Collapse certain IGDB attributes to respective strings
+    keyword_list = case IGDB.get_keywords_by_id_list(Map.get(igdb_game, "keywords") || []) do
+      {:ok, keywords} -> keywords
+      {:error, _} -> []
     end
+    theme_list = case IGDB.get_themes_by_id_list(Map.get(igdb_game, "themes") || []) do
+      {:ok, themes} -> themes
+      {:error, _} -> []
+    end
+    alternative_names = case IGDB.get_alternative_names_by_id_list(Map.get(igdb_game, "alternative_names") || []) do
+      {:ok, names} -> names
+      {:error, _} -> []
+    end
+    franchise_name = case IGDB.get_franchise_by_id(franchise_id) do
+      {:ok, name} -> name
+      {:error, _} -> nil
+    end
+    artwork_url = case IGDB.get_cover_art_url(Map.get(igdb_game, "cover")) do
+      {:ok, url} -> url
+      {:error, _} -> nil
+    end
+    thumbnail_url = case IGDB.get_cover_thumbnail_url(Map.get(igdb_game, "cover")) do
+      {:ok, url} -> url
+      {:error, _} -> nil
+    end
+
+    # CONVERTED GAME MAP
+    new_game = igdb_game
+
+    # Extra search indices
+    |> Map.replace("keywords", keyword_list ++ theme_list)
+    |> Map.delete("themes")
+    |> Map.replace("alternative_names", alternative_names)
+
+    # Franchise
+    |> Map.put("franchise_name", franchise_name)
+    |> Map.delete("franchise")
+    |> Map.delete("franchises")
+
+    # Release date
+    |> Map.put("release_date", case DateTime.from_unix(Map.get(igdb_game, "first_release_date")) do
+      {:ok, date} -> date
+      {:error, _} -> nil
+    end)
+    |> Map.delete("first_release_date")
+
+    # Artwork URLs
+    |> Map.put("artwork_url", artwork_url)
+    |> Map.put("thumbnail_url", thumbnail_url)
+    |> Map.delete("cover")
+
+    # Type of game
+    |> Map.put("dlc", category in IGDB.get_dlc_categories())
+    |> Map.put("collection", category in IGDB.get_bundle_categories())
+
+    # Add associated platforms
+    |> Map.put("platforms", get_platforms_by_igdb_id_list(Map.get(igdb_game, "platforms")))
+
+    # Handle DLCs and collections
+    |> handle_dlc_convertion()
+    |> handle_collection_convertion()
+
+    # Remove all other
+    |> Map.delete("dlcs")
+    |> Map.delete("expansions")
+    |> Map.delete("standalone_expansions")
+    |> Map.delete("category")
+    |> Map.delete("status")
+
+    IO.inspect(igdb_game)
+    IO.inspect(new_game)
+
+    new_game
+
+    # Necessary associations for creating: platforms, parent_game, included_games
+  end
+
+  defp handle_dlc_convertion(%{"dlc" => false} = game) do
+    Map.delete(game, "parent_game")
+  end
+  defp handle_dlc_convertion(%{"dlc" => true, "parent_game" => parent_game_id} = game) do
+    game
+    |> Map.put("parent_game_id", parent_game_id)
+    |> Map.put("parent_game", case get_game(parent_game_id) do
+      {:error, _} -> nil
+      {_, game} -> game
+    end)
+  end
+
+  defp handle_collection_convertion(game) do
+    # TODO
+    game
+  end
+
+  defp handle_changeset_assocs(changeset, %{"dlc" => true} = attrs) do
+    changeset
+    |> Ecto.Changeset.put_assoc(:parent_game, attrs["parent_game"])
+    |> handle_changeset_assocs(Map.delete(attrs, "dlc"))
+  end
+  defp handle_changeset_assocs(changeset, %{"collection" => true} = attrs) do
+    changeset
+    # TODO
+  end
+  defp handle_changeset_assocs(changeset, attrs) do
+    changeset
+    |> Ecto.Changeset.put_assoc(:platforms, attrs["platforms"])
   end
 
   @doc """
-  Creates a game from an IGDB game (same as QuestTrackr.Data.create_game/1),
-  but creates all related DLCs and bundles that are associated with the game.
-  """
-  def create_game_deep(igdb_id) do
-    game = case create_game(igdb_id) do
-      {:ok, result} -> result
-      {:error, message} -> raise message
-    end
-
-    refresh_dlcs(game)
-    refresh_bundles(game)
-
-    get_game(igdb_id)
-  end
-
-  @doc """
-  Updates a game.
+  Updates a game to its most recent IGDB data.
 
   ## Examples
 
@@ -262,203 +343,36 @@ defmodule QuestTrackr.Data do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_game(%Game{} = game, attrs) do
+  def update_game(%Game{} = game) do
     game
-    |> Game.changeset(attrs)
-    |> Repo.update()
-  end
-
-  def update_game_from_igdb(%Game{} = game) do
-    case IGDB.get_game_by_id(game.id) do
-      {:ok, new_game} ->
-        update_game(game, convert_game_igdb_to_db(new_game))
-
-      {:error, message} -> {:error, message}
-    end
+    # |> Game.changeset(attrs)
+    # |> Repo.update()
   end
 
   @doc """
-  Updates a game if a year has passed since the previous DB update,
+  Returns an `%Ecto.Changeset{}` for tracking game changes.
+
+  ## Examples
+
+      iex> change_game(game)
+      %Ecto.Changeset{data: %Game{}}
+
   """
-  def check_for_update_game(%Game{} = game) do
-    # year_in_microseconds = 365 * 24 * 60 * 60 * 1000 * 1000 = 31536000000000
-    year_ago = DateTime.from_unix(trunc(System.os_time() / 10) - 31536000000000, :microsecond)
-    if Map.get(game, "updated_at") < year_ago do
-      case IGDB.get_game_by_id(game.id) do
-        {:ok, new_game} ->
-          if game.updated_at < DateTime.from_unix(new_game["updated_at"]) do
-            game
-            |> create_full_game_changeset_from_igdb(new_game)
-            |> Repo.update()
-          else
-            update_game(game, %{"updated_at" => DateTime.utc_now()})
-          end
-
-        {:error, message} ->
-          {:error, message}
-      end
-    else
-      game
-    end
-  end
-
-
-  defp create_full_game_changeset_from_igdb(%Game{} = game, igdb_game) do
-    new_game = game
-    |> Game.changeset(convert_game_igdb_to_db(igdb_game))
-    |> Ecto.Changeset.put_assoc(:platforms, get_igdb_game_associated_platforms(igdb_game))
-    # |> Ecto.Changeset.put_assoc(:parent_game, get_igdb_game_associated_parent_game(igdb_game))
-    |> Ecto.Changeset.put_assoc(:included_games, get_igdb_game_associated_included_games(igdb_game))
-
-    IO.inspect(new_game)
-    new_game
-    # DLC and Bundles are not included as it creates circular references, especially when creating a new game entry
+  def change_game(%Game{} = game, attrs \\ %{}) do
+    Game.changeset(game, attrs)
   end
 
   @doc """
-  Returns the map of non-association attributes of a game from the given IGDB game map.
+  Returns a list of DLCs for a game.
   """
-  def convert_game_igdb_to_db(game) do
-    franchise_id = Map.get(game, "franchise") || hd(Map.get(game, "franchises"))
-    category = Map.get(game, "category")
-
-    # Collapse certain IGDB attributes to respective strings
-    keyword_list = case IGDB.get_keywords_by_id_list(unnillify_list(Map.get(game, "keywords"))) do
-      {:ok, keywords} -> keywords
-      {:error, _} -> []
-    end
-    theme_list = case IGDB.get_themes_by_id_list(unnillify_list(Map.get(game, "themes"))) do
-      {:ok, themes} -> themes
-      {:error, _} -> []
-    end
-    alternative_names = case IGDB.get_alternative_names_by_id_list(unnillify_list(Map.get(game, "alternative_names"))) do
-      {:ok, names} -> names
-      {:error, _} -> []
-    end
-    franchise_name = case IGDB.get_franchise_by_id(franchise_id) do
-      {:ok, name} -> name
-      {:error, _} -> nil
-    end
-    artwork_url = case IGDB.get_cover_art_url(Map.get(game, "cover")) do
-      {:ok, url} -> url
-      {:error, _} -> nil
-    end
-    thumbnail_url = case IGDB.get_cover_thumbnail_url(Map.get(game, "cover")) do
-      {:ok, url} -> url
-      {:error, _} -> nil
-    end
-
-    new_game = game
-
-    # GAME'S SEARCH KEYWORDS
-    |> Map.replace("keywords", keyword_list ++ theme_list)
-    |> Map.delete("themes")
-
-    # GAME'S ALTERNATIVE NAMES
-    |> Map.replace("alternative_names", alternative_names)
-
-    # FRANCHISE
-    |> Map.put("franchise_name", franchise_name)
-    |> Map.delete("franchise")
-    |> Map.delete("franchises")
-
-    # RELEASE DATE
-    |> Map.put("release_date", case DateTime.from_unix(Map.get(game, "first_release_date")) do
-      {:ok, date} -> date
-      {:error, _} -> nil
-    end)
-    |> Map.delete("first_release_date")
-
-    # ARTWORK URLS
-    |> Map.put("artwork_url", artwork_url)
-    |> Map.put("thumbnail_url", thumbnail_url)
-    |> Map.delete("cover")
-
-    # ASSIGN TYPE OF GAME
-    |> Map.put("dlc", category in IGDB.get_dlc_categories())
-    |> Map.put("collection", category in IGDB.get_bundle_categories())
-
-    # REMOVE OTHER
-    |> Map.delete("parent_game")
-    |> Map.delete("dlcs")
-    |> Map.delete("expansions")
-    |> Map.delete("standalone_expansions")
-    |> Map.delete("category")
-    |> Map.delete("status")
-
-    IO.inspect(game)
-    IO.inspect(new_game)
-
-    new_game
+  def get_dlcs(game) do
+    # TODO
   end
 
   @doc """
-  Returns the list of platforms this game has been released on.
+  Returns a list of collections containing a game.
   """
-  def get_igdb_game_associated_platforms(%{"platforms" => platform_ids}) do
-    Enum.filter(Enum.map(unnillify_list(platform_ids),
-    fn platform_id ->
-      case get_platform_by_igdb_id(platform_id) do
-        {:ok, platform} -> platform
-        {:error, _} -> nil
-      end
-    end), &(&1 != nil))
+  def get_collections(game) do
+    # TODO
   end
-  def get_igdb_game_associated_platforms(_), do: []
-
-  @doc """
-  Returns the parent game this game, if it is a DLC game.
-  """
-  def get_igdb_game_associated_parent_game(%{"parent_game" => parent_game_id, "category" => category}) do
-    if category in IGDB.get_dlc_categories() do
-      case get_game(parent_game_id) do
-        {:ok, parent_game} -> parent_game
-        {:error, _} -> nil
-      end
-    else
-      nil
-    end
-  end
-  def get_igdb_game_associated_parent_game(_), do: nil
-
-  @doc """
-  Returns the list of included this game, if it is a collection of games (bundle).
-  """
-  def get_igdb_game_associated_included_games(%{"id" => id, "category" => category}) do
-    if category in IGDB.get_bundle_categories() do
-      case IGDB.get_games_included_in(id) do
-        {:ok, included_games_igdb} -> included_games_igdb
-        {:error, _} -> []
-      end
-
-      |> Enum.map(fn included_game ->
-        case get_game(included_game["id"]) do
-          {:ok, game} -> game
-          {:error, _} -> nil
-        end
-      end)
-
-      |> Enum.filter(&(&1 != nil))
-    else
-      []
-    end
-  end
-  def get_igdb_game_associated_included_games(_), do: []
-
-  @doc """
-  Queries IGDB for games that are DLC of the given game.
-  """
-  def refresh_dlcs(%Game{} = game) do
-
-  end
-
-  @doc """
-  Queries IGDB for games that are bundles that include the given game.
-  """
-  def refresh_bundles(%Game{} = game) do
-
-  end
-
-  # Random utility function
-  defp unnillify_list(value), do: (if value == nil, do: [], else: value)
 end
