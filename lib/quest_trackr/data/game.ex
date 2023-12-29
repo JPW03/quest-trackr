@@ -35,24 +35,21 @@ defmodule QuestTrackr.Data.Game do
   def changeset(game, attrs) do
     game
     |> cast(attrs, [:id, :name, :dlc, :collection, :alternative_names, :keywords, :franchise_name, :artwork_url, :thumbnail_url, :release_date])
+    |> put_assoc(:platforms, attrs["platforms"])
+    |> validate_if_collection(attrs)
+    |> validate_if_dlc(attrs)
     |> validate_required([:id, :name, :dlc, :collection])
-    |> validate_if_dlc()
-    |> validate_if_collection()
   end
 
-  defp validate_if_dlc(changeset) do
-    # if get_field(changeset, :dlc) do
-    #   changeset
-    #   |> validate_required([:parent_game_id])
-    # else
-    #   changeset
-    # end
-    # TODO
+  defp validate_if_dlc(changeset, %{"dlc" => true} = attrs) do
     changeset
+    |> put_assoc(:parent_game, attrs["parent_game"])
   end
+  defp validate_if_dlc(changeset, _attrs), do: changeset
 
-  defp validate_if_collection(changeset) do
-    # TODO
+  defp validate_if_collection(changeset, %{"collection" => true} = attrs) do
     changeset
+    |> put_assoc(:included_games, attrs["included_games"])
   end
+  defp validate_if_collection(changeset, _attrs), do: changeset
 end

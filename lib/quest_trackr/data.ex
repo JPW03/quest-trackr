@@ -260,7 +260,6 @@ defmodule QuestTrackr.Data do
 
     %Game{}
     |> Game.changeset(attrs)
-    |> handle_changeset_assocs(attrs)
     |> Repo.insert()
   end
 
@@ -358,23 +357,19 @@ defmodule QuestTrackr.Data do
     end)
   end
 
-  defp handle_collection_convertion(game) do
-    # TODO
+  defp handle_collection_convertion(%{"collection" => false} = game), do: game
+  defp handle_collection_convertion(%{"collection" => true} = game) do
     game
-  end
-
-  defp handle_changeset_assocs(changeset, %{"dlc" => true} = attrs) do
-    changeset
-    |> Ecto.Changeset.put_assoc(:parent_game, attrs["parent_game"])
-    |> handle_changeset_assocs(Map.delete(attrs, "dlc"))
-  end
-  defp handle_changeset_assocs(changeset, %{"collection" => true} = attrs) do
-    changeset
-    # TODO
-  end
-  defp handle_changeset_assocs(changeset, attrs) do
-    changeset
-    |> Ecto.Changeset.put_assoc(:platforms, attrs["platforms"])
+    |> Map.put("included_games",
+    case IGDB.get_games_included_in(game["id"]) do
+      {:ok, included_games} -> included_games
+      {:error, _} -> []
+    end
+    |> Enum.map(&(case get_game(&1["id"]) do
+      {:error, _} -> nil
+      {_, game} -> game
+    end))
+    |> Enum.filter(&(&1 != nil)))
   end
 
   @doc """
@@ -427,6 +422,14 @@ defmodule QuestTrackr.Data do
   Returns a list of collections containing a game.
   """
   def get_collections(game) do
-    # TODO
+    case IGDB.get_game_by_id(game.id) do
+      {:ok, game} -> Map.get(game, "bundles") || []
+      {:error, _} -> []
+    end
+    |> Enum.map(&(case get_game(&1) do
+      {:error, _} -> nil
+      {_, game} -> game
+    end))
+    |> Enum.filter(&(&1 != nil))
   end
 end

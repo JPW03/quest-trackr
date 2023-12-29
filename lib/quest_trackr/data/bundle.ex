@@ -5,8 +5,6 @@ defmodule QuestTrackr.Data.Bundle do
   schema "bundles" do
     field :bundle_game_id, :id
     field :included_game_id, :id
-
-    timestamps()
   end
 
   @doc false
