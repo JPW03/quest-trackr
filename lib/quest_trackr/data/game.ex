@@ -12,6 +12,7 @@ defmodule QuestTrackr.Data.Game do
     field :keywords, {:array, :string}
     field :name, :string
     field :release_date, :naive_datetime
+    field :thumbnail_url, :string
 
     belongs_to :parent_game, QuestTrackr.Data.Game
 
@@ -34,7 +35,25 @@ defmodule QuestTrackr.Data.Game do
   @doc false
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:name, :alternative_names, :keywords, :dlc, :collection, :franchise_name, :game_version_numbers, :artwork_url, :release_date])
-    |> validate_required([:name, :alternative_names, :keywords, :dlc, :collection, :franchise_name, :game_version_numbers, :artwork_url, :release_date])
+    |> cast(attrs, [:id, :name, :dlc, :collection, :franchise_name, :game_version_numbers, :artwork_url, :release_date])
+    |> validate_required([:id, :name, :dlc, :collection])
+    |> validate_if_dlc()
+    |> validate_if_collection()
+  end
+
+  defp validate_if_dlc(changeset) do
+    # if get_field(changeset, :dlc) do
+    #   changeset
+    #   |> validate_required([:parent_game_id])
+    # else
+    #   changeset
+    # end
+    # TODO
+    changeset
+  end
+
+  defp validate_if_collection(changeset) do
+    # TODO
+    changeset
   end
 end

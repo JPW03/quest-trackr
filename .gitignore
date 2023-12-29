@@ -37,3 +37,6 @@ npm-debug.log
 
 # Environment variable files
 .env*
+
+# Test user email and passwords
+test_users.txt

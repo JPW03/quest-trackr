@@ -142,7 +142,25 @@ defmodule QuestTrackr.IGDB do
   ]
 
   @dlc_categories [:dlc_addon, :expansion, :standalone_expansion, :episode, :pack]
+
+  @doc """
+  Returns a list of the numbers for categories represnting DLC games.
+  """
+  def get_dlc_categories do
+    Enum.filter(@categories, fn {_, c} -> c in @dlc_categories end)
+    |> Enum.map(fn {n, _} -> n end)
+  end
+
   @bundle_categories [:bundle]
+
+  @doc """
+  Returns a list of the numbers for categories represnting games that are bundles (contain other games).
+  """
+  def get_bundle_categories do
+    Enum.filter(@categories, fn {_, c} -> c in @bundle_categories end)
+    |> Enum.map(fn {n, _} -> n end)
+  end
+
   @excluded_categories [:mod, :update, :season]
 
   defp get_accepted_categories_string do
@@ -202,6 +220,17 @@ defmodule QuestTrackr.IGDB do
     end
   end
 
+  @doc """
+  Returns the list of games included in the given bundle game.
+  i.e. games where the given game is in the 'bundles' list.
+  """
+  def get_games_included_in(game_id) do
+    case query("#{@base_url}games/", construct_game_query("bundles = (#{game_id})")) do
+      {:ok, games} -> {:ok, games}
+      {status, body} -> {status, body}
+    end
+  end
+
   defp construct_game_query(condition) do
     "fields #{Enum.join(@game_expected_fields, ",")};" <>
     " where category = #{get_accepted_categories_string()}" <>
@@ -222,15 +251,16 @@ defmodule QuestTrackr.IGDB do
     ) # for some reason IGDB returns a list of size (limit - 1)
   end
 
-  defp list_to_igdb_query_string(list) do
+  defp list_to_igdb_query_string([_|_] = list) do
     "(" <> Enum.join(list, ",") <> ")"
   end
+  defp list_to_igdb_query_string(list), do: list
 
   @doc """
   Searches IGDB's Keywords using a given ID list.
   Returns only the name attribute of each found.
   """
-  def get_keyword_by_id_list(id_list) do
+  def get_keywords_by_id_list(id_list) do
     case query("#{@base_url}keywords/", "fields name; where id = #{list_to_igdb_query_string(id_list)};") do
       {:ok, keywords} -> {:ok, Enum.map(keywords, fn (%{"name" => name}) -> name end)}
       {status, body} -> {status, body}
@@ -241,7 +271,7 @@ defmodule QuestTrackr.IGDB do
   Searches IGDB's Themes using a given ID list.
   Returns only the name attribute of each found.
   """
-  def get_theme_by_id_list(id_list) do
+  def get_themes_by_id_list(id_list) do
     case query("#{@base_url}themes/", "fields name; where id = #{list_to_igdb_query_string(id_list)};") do
       {:ok, themes} -> {:ok, Enum.map(themes, fn (%{"name" => name}) -> name end)}
       {status, body} -> {status, body}
@@ -249,20 +279,23 @@ defmodule QuestTrackr.IGDB do
   end
 
   @doc """
-  Searches IGDB's Franchises using a given ID. Returns only the name attribute if found.
+  Searches IGDB's Franchises using a given ID or ID list.
+  Returns only the name attribute of the first franchise found.
   """
+  def get_franchise_by_id([ first_id |_]), do: get_franchise_by_id(first_id)
   def get_franchise_by_id(id) do
     case query("#{@base_url}franchises/", "fields name; where id = #{id};") do
-      {:ok, []} -> {:error, "Franchise not found."}
+      {:ok, []} -> {:error, "No franchise found."}
       {:ok, [%{"name" => name}]} -> {:ok, name}
       {status, body} -> {status, body}
     end
   end
+
   @doc """
   Searches IGDB's Alternative Names using a given ID list.
   Returns only the name attribute of each found.
   """
-  def get_alternative_name_by_id_list(id_list) do
+  def get_alternative_names_by_id_list(id_list) do
     case query("#{@base_url}alternative_names/", "fields name; where id = #{list_to_igdb_query_string(id_list)};") do
       {:ok, alt_names} -> {:ok, Enum.map(alt_names, fn (%{"name" => name}) -> name end)}
       {status, body} -> {status, body}
@@ -291,7 +324,7 @@ defmodule QuestTrackr.IGDB do
   def get_cover_thumbnail_url(id) do
     case get_cover_by_id(id) do
       {:ok, [%{"image_id" => image_id}]} ->
-        {:ok, "#{@cover_art_base_url}#{image_id}.png"}
+        {:ok, "#{@cover_thumbnail_base_url}#{image_id}.jpg"}
       {status, body} ->
         {status, body}
     end
@@ -327,10 +360,10 @@ defmodule QuestTrackr.IGDB do
   """
   def get_platform_logo_url(id) do
     case get_platform_logo_by_id(id) do
+      {:ok, []} -> {:error, "Platform logo not found."}
       {:ok, [%{"image_id" => image_id}]} ->
         {:ok, "#{@platform_logo_art_url}#{image_id}.png"}
-      {status, body} ->
-        {status, body}
+      {status, body} -> {status, body}
     end
   end
 

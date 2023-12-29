@@ -6,7 +6,6 @@ defmodule QuestTrackr.Data.Platform do
     field :abbreviation, :string
     field :alternative_name, :string
     field :igdb_id, :integer
-    field :last_updated, :naive_datetime
     field :logo_image_url, :string
     field :name, :string
 
@@ -18,7 +17,7 @@ defmodule QuestTrackr.Data.Platform do
   @doc false
   def changeset(platform, attrs) do
     platform
-    |> cast(attrs, [:igdb_id, :last_updated, :name, :abbreviation, :alternative_name, :logo_image_url])
-    |> validate_required([:igdb_id, :last_updated, :name, :abbreviation, :alternative_name, :logo_image_url])
+    |> cast(attrs, [:igdb_id, :name, :abbreviation, :alternative_name, :logo_image_url])
+    |> validate_required([:igdb_id, :name, :abbreviation, :alternative_name])
   end
 end
