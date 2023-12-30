@@ -198,10 +198,13 @@ defmodule QuestTrackr.IGDB do
     dlcs expansions standalone_expansions
     bundles
     name alternative_names first_release_date
-    keywords themes franchise franchises parent_game cover
+    keywords themes
+    franchise franchises
+    parent_game
+    cover
     updated_at
   )
-  # Looking into 'tags' (Tag Numbers) may be helpful for search speeds.
+  # Looking into 'tags', 'collection'/'collections' (collection = game series/franchise) for search
 
   @doc """
   Returns a game from the given ID.
@@ -230,7 +233,7 @@ defmodule QuestTrackr.IGDB do
   i.e. games where its 'parent_game' is the given game.
   """
   def get_dlc_games_of(game_id) do
-    case query("#{@base_url}games/", construct_game_query("parent_game = #{game_id}")) do
+    case query("#{@base_url}games/", construct_game_query("parent_game = #{game_id}; limit 100")) do
       {:ok, games} -> {:ok, games}
       {status, body} -> {status, body}
     end
@@ -246,13 +249,13 @@ defmodule QuestTrackr.IGDB do
   end
 
   @doc """
-  Returns a list of games containing the name given.
+  Returns a list of games (only "id") containing the name given.
   The list will be a length equal to n_of_results, or 50 if n_of_results is not given.
   """
   def search_games_by_name(name, n_of_results \\ 50) do
     query(
       "#{@base_url}games/",
-      "fields *; search \"#{name}\"; limit #{n_of_results + 1};"
+      "fields id; search \"#{name}\"; limit #{n_of_results + 1};"
     ) # for some reason IGDB returns a list of size (limit - 1)
   end
 
@@ -319,19 +322,7 @@ defmodule QuestTrackr.IGDB do
   def get_cover_art_url(id) do
     case get_cover_by_id(id) do
       {:ok, [%{"image_id" => image_id}]} ->
-        {:ok, "#{@cover_art_base_url}#{image_id}.png"}
-      {status, body} ->
-        {status, body}
-    end
-  end
-
-  @doc """
-  Returns the thumbnail version of the cover art for a given ID
-  """
-  def get_cover_thumbnail_url(id) do
-    case get_cover_by_id(id) do
-      {:ok, [%{"image_id" => image_id}]} ->
-        {:ok, "#{@cover_thumbnail_base_url}#{image_id}.jpg"}
+        {:ok, "#{@cover_art_base_url}#{image_id}.png", "#{@cover_thumbnail_base_url}#{image_id}.jpg"}
       {status, body} ->
         {status, body}
     end

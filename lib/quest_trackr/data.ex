@@ -46,12 +46,13 @@ defmodule QuestTrackr.Data do
   If an entry doesn't exist for that platform, a new one is created.
   """
   def get_platform_by_igdb_id(igdb_id) do
-    case (case Repo.get_by(Platform, igdb_id: igdb_id) do
-      nil -> create_platform(igdb_id)
-      platform -> check_for_update_platform(platform)
-    end) do
-      {:ok, platform} -> platform
-      {:error, _} -> nil
+    case Repo.all(from p in Platform,
+    where: p.igdb_id == ^igdb_id and p.updated_at > datetime_add(^NaiveDateTime.utc_now(), -1, "year")) do
+      [] ->
+        handle_old_platform(igdb_id)
+
+      [platform] ->
+        platform
     end
   end
 
@@ -60,8 +61,28 @@ defmodule QuestTrackr.Data do
   If an entry doesn't exist for a platform, a new one is created.
   """
   def get_platforms_by_igdb_id_list(igdb_id_list) do
-    igdb_id_list
-    |> Enum.map(&get_platform_by_igdb_id/1)
+    existing_platforms = Repo.all(
+      from p in Platform,
+      where: p.igdb_id in ^igdb_id_list and
+      p.updated_at > datetime_add(^NaiveDateTime.utc_now(), -1, "year")
+    )
+
+    Enum.filter(igdb_id_list, fn igdb_id ->
+      igdb_id not in Enum.map(existing_platforms, &(&1.igdb_id))
+    end)
+    |> Enum.map(&handle_old_platform/1)
+    |> Enum.filter(&(&1 != nil))
+    |> Enum.concat(existing_platforms)
+  end
+
+  defp handle_old_platform(igdb_id) do
+    case (case Repo.get_by(Platform, igdb_id: igdb_id) do
+      nil -> create_platform(igdb_id)
+      platform -> update_platform(platform)
+    end) do
+      {:ok, platform} -> platform
+      {:error, _} -> nil
+    end
   end
 
   @doc """
@@ -80,34 +101,7 @@ defmodule QuestTrackr.Data do
   end
 
   @doc """
-  Updates a platform if a year has passed since the previous DB update,
-  and its IGDB entry has been changed since previous update.
-
-  If a year has passed and there are no changes to be made, the platform's
-  `updated_at` field is updated to the current time.
-  """
-  def check_for_update_platform(%Platform{} = platform) do
-    # year_in_microseconds = 365 * 24 * 60 * 60 * 1000 * 1000 = 31536000000000
-    year_ago = DateTime.from_unix(trunc(System.os_time() / 10) - 31536000000000, :microsecond)
-    if Map.get(platform, "updated_at") < year_ago do
-      case IGDB.get_platform_by_id(platform.igdb_id) do
-        {:ok, new_platform} ->
-          if platform.updated_at < DateTime.from_unix(new_platform["updated_at"]) do
-            update_platform(platform, convert_platform_igdb_to_db(new_platform))
-          else
-            update_platform(platform, %{"updated_at" => DateTime.utc_now()})
-          end
-
-        {:error, message} ->
-          {:error, message}
-      end
-    else
-      platform
-    end
-  end
-
-  @doc """
-  Updates a platform.
+  Updates a platform to its most recent IGDB data.
 
   ## Examples
 
@@ -118,10 +112,16 @@ defmodule QuestTrackr.Data do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_platform(%Platform{} = platform, attrs) do
-    platform
-    |> Platform.changeset(attrs)
-    |> Repo.update()
+  def update_platform(%Platform{} = platform) do
+    case IGDB.get_platform_by_id(platform.id) do
+      {:ok, igdb_platform} ->
+        %Platform{}
+        |> Platform.changeset(convert_platform_igdb_to_db(igdb_platform))
+        |> Repo.update()
+
+      {:error, message} ->
+        {:error, message}
+    end
   end
 
   defp convert_platform_igdb_to_db(platform) do
@@ -140,7 +140,7 @@ defmodule QuestTrackr.Data do
 
   @doc """
   Returns the list of games from a search term.
-  Search term is compared to the game's name, alternative names and keywords.
+  Search term is compared to the game's name.
 
   ## Examples
 
@@ -148,9 +148,35 @@ defmodule QuestTrackr.Data do
       [%Game{}, ...]
 
   """
-  def search_games do
-    # TODO
-    Repo.all(Game)
+  def search_games(search_term, limit \\ 25) do
+    results = search_games_by_term(search_term)
+
+    if length(results) <= limit do
+      new_results =
+        case IGDB.search_games_by_name(search_term, limit) do
+          {:ok, games} ->
+            games
+            |> Enum.map(&(&1["id"]))
+            |> Enum.filter(fn game_id -> game_id not in Enum.map(results, &(&1.id)) end)
+            |> Enum.map(&(case get_game(&1) do
+              {:error, _} -> nil
+              {_, game} -> game
+            end))
+            |> Enum.filter(&(&1 != nil))
+          {:error, _} -> []
+        end
+
+      results ++ new_results
+    else
+      results
+      |> Enum.take(limit)
+    end
+  end
+
+  defp search_games_by_term(search_term) do
+    query = from g in Game, where:
+      ilike(g.name, ^"%#{search_term}%")
+    Repo.all(query)
   end
 
   @doc """
@@ -255,16 +281,18 @@ defmodule QuestTrackr.Data do
 
   """
   def create_game(igdb_id) do
-    attrs = convert_game_igdb_to_db(IGDB.get_game_by_id(igdb_id))
-    IO.inspect attrs
+    case IGDB.get_game_by_id(igdb_id) do
+      {:ok, igdb_game} ->
+        %Game{}
+        |> Game.changeset(convert_game_igdb_to_db(igdb_game))
+        |> Repo.insert()
 
-    %Game{}
-    |> Game.changeset(attrs)
-    |> Repo.insert()
+      {:error, message} ->
+        {:error, message}
+    end
   end
 
-  defp convert_game_igdb_to_db({:error, _}), do: raise "IGDB API error"
-  defp convert_game_igdb_to_db({:ok, igdb_game}) do
+  defp convert_game_igdb_to_db(igdb_game) do
     franchise_id = Map.get(igdb_game, "franchise") || List.first(Map.get(igdb_game, "franchises") || [], [])
     category = Map.get(igdb_game, "category")
 
@@ -285,17 +313,16 @@ defmodule QuestTrackr.Data do
       {:ok, name} -> name
       {:error, _} -> nil
     end
-    artwork_url = case IGDB.get_cover_art_url(Map.get(igdb_game, "cover")) do
-      {:ok, url} -> url
-      {:error, _} -> nil
-    end
-    thumbnail_url = case IGDB.get_cover_thumbnail_url(Map.get(igdb_game, "cover")) do
-      {:ok, url} -> url
-      {:error, _} -> nil
+    {artwork_url, thumbnail_url} = case Map.get(igdb_game, "cover") do
+      nil -> {nil, nil}
+      cover -> case IGDB.get_cover_art_url(cover) do
+        {:ok, a_url, t_url} -> {a_url, t_url}
+        {:error, _} -> nil
+      end
     end
 
     # CONVERTED GAME MAP
-    new_game = igdb_game
+    igdb_game
 
     # Extra search indices
     |> Map.replace("keywords", keyword_list ++ theme_list)
@@ -308,7 +335,7 @@ defmodule QuestTrackr.Data do
     |> Map.delete("franchises")
 
     # Release date
-    |> Map.put("release_date", case DateTime.from_unix(Map.get(igdb_game, "first_release_date")) do
+    |> Map.put("release_date", case DateTime.from_unix(Map.get(igdb_game, "first_release_date") || 0) do
       {:ok, date} -> date
       {:error, _} -> nil
     end)
@@ -324,7 +351,7 @@ defmodule QuestTrackr.Data do
     |> Map.put("collection", category in IGDB.get_bundle_categories())
 
     # Add associated platforms
-    |> Map.put("platforms", get_platforms_by_igdb_id_list(Map.get(igdb_game, "platforms")))
+    |> Map.put("platforms", get_platforms_by_igdb_id_list(Map.get(igdb_game, "platforms") || []))
 
     # Handle DLCs and collections
     |> handle_dlc_convertion()
@@ -336,13 +363,6 @@ defmodule QuestTrackr.Data do
     |> Map.delete("standalone_expansions")
     |> Map.delete("category")
     |> Map.delete("status")
-
-    IO.inspect(igdb_game)
-    IO.inspect(new_game)
-
-    new_game
-
-    # Necessary associations for creating: platforms, parent_game, included_games
   end
 
   defp handle_dlc_convertion(%{"dlc" => false} = game) do
@@ -385,9 +405,15 @@ defmodule QuestTrackr.Data do
 
   """
   def update_game(%Game{} = game) do
-    game
-    # |> Game.changeset(attrs)
-    # |> Repo.update()
+    case IGDB.get_game_by_id(game.id) do
+      {:ok, igdb_game} ->
+        %Game{}
+        |> Game.changeset(convert_game_igdb_to_db(igdb_game))
+        |> Repo.update()
+
+      {:error, message} ->
+        {:error, message}
+    end
   end
 
   @doc """
