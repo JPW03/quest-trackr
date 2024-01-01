@@ -1,4 +1,4 @@
-defmodule QuestTrackrWeb.GameLiveTest do
+defmodule QuestTrackrWeb.LibraryLiveTest do
   use QuestTrackrWeb.ConnCase
 
   import Phoenix.LiveViewTest
@@ -16,19 +16,19 @@ defmodule QuestTrackrWeb.GameLiveTest do
   describe "Index" do
     setup [:create_game]
 
-    test "lists all games_in_library", %{conn: conn} do
-      {:ok, _index_live, html} = live(conn, ~p"/games_in_library")
+    test "lists all library", %{conn: conn} do
+      {:ok, _index_live, html} = live(conn, ~p"/library")
 
       assert html =~ "Listing Games in library"
     end
 
     test "saves new game", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, ~p"/games_in_library")
+      {:ok, index_live, _html} = live(conn, ~p"/library")
 
       assert index_live |> element("a", "New Game") |> render_click() =~
                "New Game"
 
-      assert_patch(index_live, ~p"/games_in_library/new")
+      assert_patch(index_live, ~p"/library/new")
 
       assert index_live
              |> form("#game-form", game: @invalid_attrs)
@@ -38,19 +38,19 @@ defmodule QuestTrackrWeb.GameLiveTest do
              |> form("#game-form", game: @create_attrs)
              |> render_submit()
 
-      assert_patch(index_live, ~p"/games_in_library")
+      assert_patch(index_live, ~p"/library")
 
       html = render(index_live)
       assert html =~ "Game created successfully"
     end
 
     test "updates game in listing", %{conn: conn, game: game} do
-      {:ok, index_live, _html} = live(conn, ~p"/games_in_library")
+      {:ok, index_live, _html} = live(conn, ~p"/library")
 
-      assert index_live |> element("#games_in_library-#{game.id} a", "Edit") |> render_click() =~
+      assert index_live |> element("#library-#{game.id} a", "Edit") |> render_click() =~
                "Edit Game"
 
-      assert_patch(index_live, ~p"/games_in_library/#{game}/edit")
+      assert_patch(index_live, ~p"/library/#{game}/edit")
 
       assert index_live
              |> form("#game-form", game: @invalid_attrs)
@@ -60,17 +60,17 @@ defmodule QuestTrackrWeb.GameLiveTest do
              |> form("#game-form", game: @update_attrs)
              |> render_submit()
 
-      assert_patch(index_live, ~p"/games_in_library")
+      assert_patch(index_live, ~p"/library")
 
       html = render(index_live)
       assert html =~ "Game updated successfully"
     end
 
     test "deletes game in listing", %{conn: conn, game: game} do
-      {:ok, index_live, _html} = live(conn, ~p"/games_in_library")
+      {:ok, index_live, _html} = live(conn, ~p"/library")
 
-      assert index_live |> element("#games_in_library-#{game.id} a", "Delete") |> render_click()
-      refute has_element?(index_live, "#games_in_library-#{game.id}")
+      assert index_live |> element("#library-#{game.id} a", "Delete") |> render_click()
+      refute has_element?(index_live, "#library-#{game.id}")
     end
   end
 
@@ -78,18 +78,18 @@ defmodule QuestTrackrWeb.GameLiveTest do
     setup [:create_game]
 
     test "displays game", %{conn: conn, game: game} do
-      {:ok, _show_live, html} = live(conn, ~p"/games_in_library/#{game}")
+      {:ok, _show_live, html} = live(conn, ~p"/library/#{game}")
 
       assert html =~ "Show Game"
     end
 
     test "updates game within modal", %{conn: conn, game: game} do
-      {:ok, show_live, _html} = live(conn, ~p"/games_in_library/#{game}")
+      {:ok, show_live, _html} = live(conn, ~p"/library/#{game}")
 
       assert show_live |> element("a", "Edit") |> render_click() =~
                "Edit Game"
 
-      assert_patch(show_live, ~p"/games_in_library/#{game}/show/edit")
+      assert_patch(show_live, ~p"/library/#{game}/show/edit")
 
       assert show_live
              |> form("#game-form", game: @invalid_attrs)
@@ -99,7 +99,7 @@ defmodule QuestTrackrWeb.GameLiveTest do
              |> form("#game-form", game: @update_attrs)
              |> render_submit()
 
-      assert_patch(show_live, ~p"/games_in_library/#{game}")
+      assert_patch(show_live, ~p"/library/#{game}")
 
       html = render(show_live)
       assert html =~ "Game updated successfully"

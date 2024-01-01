@@ -88,11 +88,11 @@ defmodule QuestTrackrWeb.Router do
   scope "/", QuestTrackrWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    live "/games_in_library", GameLive.Index, :index
-    live "/games_in_library/new", GameLive.Index, :new
-    live "/games_in_library/:id/edit", GameLive.Index, :edit
+    live "/library", LibraryLive.Index, :index
+    live "/library/new", LibraryLive.Index, :new
+    live "/library/:id/edit", LibraryLive.Index, :edit
 
-    live "/games_in_library/:id", GameLive.Show, :show
-    live "/games_in_library/:id/show/edit", GameLive.Show, :edit
+    live "/library/:id", LibraryLive.Show, :show
+    live "/library/:id/show/edit", LibraryLive.Show, :edit
   end
 end

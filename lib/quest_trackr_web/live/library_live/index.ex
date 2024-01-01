@@ -1,4 +1,4 @@
-defmodule QuestTrackrWeb.GameLive.Index do
+defmodule QuestTrackrWeb.LibraryLive.Index do
   use QuestTrackrWeb, :live_view
 
   alias QuestTrackr.Library
@@ -33,7 +33,7 @@ defmodule QuestTrackrWeb.GameLive.Index do
   end
 
   @impl true
-  def handle_info({QuestTrackrWeb.GameLive.FormComponent, {:saved, game}}, socket) do
+  def handle_info({QuestTrackrWeb.LibraryLive.FormComponent, {:saved, game}}, socket) do
     {:noreply, stream_insert(socket, :games_in_library, game)}
   end
 

@@ -2,7 +2,7 @@
   Game <%= @game.id %>
   <:subtitle>This is a game record from your database.</:subtitle>
   <:actions>
-    <.link patch={~p"/games_in_library/#{@game}/show/edit"} phx-click={JS.push_focus()}>
+    <.link patch={~p"/library/#{@game}/show/edit"} phx-click={JS.push_focus()}>
       <.button>Edit game</.button>
     </.link>
   </:actions>
@@ -17,15 +17,15 @@
   <:item title="Last updated"><%= @game.last_updated %></:item>
 </.list>
 
-<.back navigate={~p"/games_in_library"}>Back to games_in_library</.back>
+<.back navigate={~p"/library"}>Back to library</.back>
 
-<.modal :if={@live_action == :edit} id="game-modal" show on_cancel={JS.patch(~p"/games_in_library/#{@game}")}>
+<.modal :if={@live_action == :edit} id="game-modal" show on_cancel={JS.patch(~p"/library/#{@game}")}>
   <.live_component
-    module={QuestTrackrWeb.GameLive.FormComponent}
+    module={QuestTrackrWeb.LibraryLive.FormComponent}
     id={@game.id}
     title={@page_title}
     action={@live_action}
     game={@game}
-    patch={~p"/games_in_library/#{@game}"}
+    patch={~p"/library/#{@game}"}
   />
 </.modal>

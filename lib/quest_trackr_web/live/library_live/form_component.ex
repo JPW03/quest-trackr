@@ -1,4 +1,4 @@
-defmodule QuestTrackrWeb.GameLive.FormComponent do
+defmodule QuestTrackrWeb.LibraryLive.FormComponent do
   use QuestTrackrWeb, :live_component
 
   alias QuestTrackr.Library

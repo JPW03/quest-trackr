@@ -1,4 +1,4 @@
-defmodule QuestTrackrWeb.GameLive.Show do
+defmodule QuestTrackrWeb.LibraryLive.Show do
   use QuestTrackrWeb, :live_view
 
   alias QuestTrackr.Library
