@@ -89,6 +89,7 @@ defmodule QuestTrackrWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live "/library", LibraryLive.Index, :index
+    live "/library/search_new", LibraryLive.Index, :search_new
     live "/library/new", LibraryLive.Index, :new
     live "/library/:id/edit", LibraryLive.Index, :edit
 

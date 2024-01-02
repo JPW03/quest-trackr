@@ -1,8 +1,8 @@
 <.header>
   Listing Games in library
   <:actions>
-    <.link patch={~p"/library/new"}>
-      <.button>New Game</.button>
+    <.link patch={~p"/library/search_new"}>
+      <.button>Add Game</.button>
     </.link>
   </:actions>
 </.header>
@@ -33,6 +33,15 @@
     </.link>
   </:action>
 </.table>
+
+<.modal :if={@live_action == :search_new} id="game-add" show on_cancel={JS.patch(~p"/library")}>
+  <.live_component
+    module={QuestTrackrWeb.LibraryLive.GameSearchBarComponent}
+    id={:search_new}
+    title={@page_title}
+    patch={~p"/library"}
+  />
+</.modal>
 
 <.modal :if={@live_action in [:new, :edit]} id="game-modal" show on_cancel={JS.patch(~p"/library")}>
   <.live_component

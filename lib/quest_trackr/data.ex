@@ -148,17 +148,28 @@ defmodule QuestTrackr.Data do
       [%Game{}, ...]
 
   """
-  def search_games(search_term, limit \\ 25) do
-    results = search_games_by_term(search_term)
+  def search_games(search_term, limit \\ 25, opts \\ %{}) do
+    # Prioritise perfect matches
+    results = try do
+      case Repo.get_by(Game, name: search_term) do
+        nil -> []
+        game -> [game]
+      end
+    catch
+      _ -> []
+    end
+
+    results = results ++ search_games_by_term(search_term)
+    |> Enum.uniq_by(&(&1.id))
 
     if length(results) <= limit do
       new_results =
-        case IGDB.search_games_by_name(search_term, limit) do
+        case IGDB.search_games_by_name(search_term, limit * 2) do
           {:ok, games} ->
             games
             |> Enum.map(&(&1["id"]))
             |> Enum.filter(fn game_id -> game_id not in Enum.map(results, &(&1.id)) end)
-            |> Enum.map(&(case get_game(&1) do
+            |> Enum.map(&(case get_game(&1, opts) do
               {:error, _} -> nil
               {_, game} -> game
             end))
@@ -169,8 +180,10 @@ defmodule QuestTrackr.Data do
       results ++ new_results
     else
       results
-      |> Enum.take(limit)
     end
+    |> Enum.uniq_by(&(&1.id))
+    |> Enum.take(limit)
+    |> handle_options(opts)
   end
 
   defp search_games_by_term(search_term) do
@@ -458,4 +471,5 @@ defmodule QuestTrackr.Data do
     end))
     |> Enum.filter(&(&1 != nil))
   end
+
 end

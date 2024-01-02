@@ -20,6 +20,12 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
     |> assign(:game, Library.get_game!(id))
   end
 
+  defp apply_action(socket, :search_new, _params) do
+    socket
+    |> assign(:page_title, "Search for New Game")
+    |> assign(:game, nil)
+  end
+
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New Game")
@@ -44,4 +50,6 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
 
     {:noreply, stream_delete(socket, :games_in_library, game)}
   end
+
+
 end

@@ -3,3 +3,26 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+
+/* Form Loading Styles */
+.hidden-unless-loading {
+    display: none;
+}
+
+.phx-submit-loading .hidden-unless-loading {
+    display: block;
+}
+.phx-change-loading .hidden-unless-loading {
+    display: block;
+}
+
+.hidden-if-loading {
+    display: none;
+}
+
+.phx-submit-loading .hidden-if-loading {
+    display: block;
+}
+.phx-change-loading .hidden-if-loading {
+    display: block;
+}
