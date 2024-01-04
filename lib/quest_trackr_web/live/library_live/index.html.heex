@@ -1,7 +1,7 @@
 <.header>
   Listing Games in library
   <:actions>
-    <.link patch={~p"/library/search_new"}>
+    <.link patch={~p"/library/new"}>
       <.button>Add Game</.button>
     </.link>
   </:actions>
@@ -12,12 +12,13 @@
   rows={@streams.games_in_library}
   row_click={fn {_id, game} -> JS.navigate(~p"/library/#{game}") end}
 >
+  <:col :let={{_id, game}} label="Title"><%= game.game.name %></:col>
   <:col :let={{_id, game}} label="Ownership status"><%= game.ownership_status %></:col>
   <:col :let={{_id, game}} label="Play status"><%= game.play_status %></:col>
   <:col :let={{_id, game}} label="Bought for"><%= game.bought_for %></:col>
   <:col :let={{_id, game}} label="Rating"><%= game.rating %></:col>
-  <:col :let={{_id, game}} label="Date added"><%= game.date_added %></:col>
-  <:col :let={{_id, game}} label="Last updated"><%= game.last_updated %></:col>
+  <:col :let={{_id, game}} label="Date added"><%= game.inserted_at %></:col>
+  <:col :let={{_id, game}} label="Last updated"><%= game.updated_at %></:col>
   <:action :let={{_id, game}}>
     <div class="sr-only">
       <.link navigate={~p"/library/#{game}"}>Show</.link>
@@ -50,6 +51,7 @@
     title={@page_title}
     action={@live_action}
     game={@game}
+    game_data={@game_data}
     patch={~p"/library"}
   />
 </.modal>

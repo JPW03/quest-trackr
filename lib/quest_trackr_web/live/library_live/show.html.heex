@@ -1,5 +1,5 @@
 <.header>
-  Game <%= @game.id %>
+  <%= @game.game.name %>
   <:subtitle>This is a game record from your database.</:subtitle>
   <:actions>
     <.link patch={~p"/library/#{@game}/show/edit"} phx-click={JS.push_focus()}>
@@ -13,8 +13,6 @@
   <:item title="Play status"><%= @game.play_status %></:item>
   <:item title="Bought for"><%= @game.bought_for %></:item>
   <:item title="Rating"><%= @game.rating %></:item>
-  <:item title="Date added"><%= @game.date_added %></:item>
-  <:item title="Last updated"><%= @game.last_updated %></:item>
 </.list>
 
 <.back navigate={~p"/library"}>Back to library</.back>
@@ -26,6 +24,7 @@
     title={@page_title}
     action={@live_action}
     game={@game}
+    game_data={@game_data}
     patch={~p"/library/#{@game}"}
   />
 </.modal>

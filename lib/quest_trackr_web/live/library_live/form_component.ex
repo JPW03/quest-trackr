@@ -8,7 +8,7 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
     ~H"""
     <div>
       <.header>
-        <%= @title %>
+        <%= @title %>: <%= @game_data.name %>
         <:subtitle>Use this form to manage game records in your database.</:subtitle>
       </.header>
 
@@ -41,8 +41,6 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
           options={Ecto.Enum.values(QuestTrackr.Library.Game, :bought_for)}
         />
         <.input field={@form[:rating]} type="number" label="Rating" step="any" />
-        <.input field={@form[:date_added]} type="datetime-local" label="Date added" />
-        <.input field={@form[:last_updated]} type="datetime-local" label="Last updated" />
         <:actions>
           <.button phx-disable-with="Saving...">Save Game</.button>
         </:actions>
@@ -75,7 +73,7 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
     save_game(socket, socket.assigns.action, game_params)
   end
 
-  defp save_game(socket, :edit, game_params) do
+  defp save_game(socket, _, game_params) do
     case Library.update_game(socket.assigns.game, game_params) do
       {:ok, game} ->
         notify_parent({:saved, game})
@@ -83,21 +81,6 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
         {:noreply,
          socket
          |> put_flash(:info, "Game updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
-    end
-  end
-
-  defp save_game(socket, :new, game_params) do
-    case Library.create_game(game_params) do
-      {:ok, game} ->
-        notify_parent({:saved, game})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Game created successfully")
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->

@@ -11,6 +11,13 @@ defmodule QuestTrackr.Accounts do
   ## Database getters
 
   @doc """
+  Returns the list of all users.
+  """
+  def list_users do
+    Repo.all(User)
+  end
+
+  @doc """
   Gets a user by username.
 
   ## Examples

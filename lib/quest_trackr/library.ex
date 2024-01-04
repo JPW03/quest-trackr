@@ -7,6 +7,36 @@ defmodule QuestTrackr.Library do
   alias QuestTrackr.Repo
 
   alias QuestTrackr.Library.Settings
+  alias QuestTrackr.Accounts.User
+
+  @doc """
+  Returns the list of possible library filters.
+  """
+  def list_library_filters do
+    [
+      %{name: "None", value: :none},
+      %{name: "Name", value: :name},
+      %{name: "Rating", value: :rating},
+      %{name: "Release Date", value: :release_date},
+      %{name: "Platform Name", value: :platform_name},
+      %{name: "Last Updated", value: :last_updated},
+      %{name: "Play Status", value: :play_status}
+    ]
+  end
+
+  @doc """
+  Returns the list of possible library sorts.
+  """
+  def list_library_sorts do
+    [
+      %{name: "Name", value: :name},
+      %{name: "Rating", value: :rating},
+      %{name: "Release Date", value: :release_date},
+      %{name: "Platform Name", value: :platform_name},
+      %{name: "Last Updated", value: :last_updated},
+      %{name: "Play Status", value: :play_status}
+    ]
+  end
 
   @doc """
   Gets a single settings.
@@ -22,7 +52,37 @@ defmodule QuestTrackr.Library do
   def get_settings!(id), do: Repo.get!(Settings, id)
 
   @doc """
-  Creates a settings.
+  Gets a single settings map for a given user.
+
+  ## Examples
+
+      # Settings didn't exist
+      {:new, %Settings{}}
+
+      # Settings previously existed
+      iex> get_settings_by_user(user)
+      {:old, %Settings{}}
+
+      # Erroneous
+      iex> get_settings_by_user(bad_user)
+      {:error, changeset}
+
+  """
+  def get_settings_by_user(%User{} = user) do
+    case Repo.get_by(Settings, user_id: user.id) do
+      nil ->
+        case create_settings(user) do
+          {:ok, settings} -> {:new, settings}
+          {:error, changeset} -> {:error, changeset}
+        end
+      settings -> {:old, settings}
+    end
+  end
+
+  @default_settings %{default_display_type: :shelves, default_filter: :name, default_sort_by: :name}
+
+  @doc """
+  Initialises library settings for a given user.
 
   ## Examples
 
@@ -33,9 +93,10 @@ defmodule QuestTrackr.Library do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_settings(attrs \\ %{}) do
+  def create_settings(%User{} = user) do
     settings = %Settings{}
-    |> Settings.changeset(attrs)
+    |> Settings.changeset(@default_settings)
+    |> Ecto.Changeset.put_assoc(:user, user)
     |> Repo.insert()
 
     case settings do
@@ -65,36 +126,10 @@ defmodule QuestTrackr.Library do
   end
 
   @doc """
-  Deletes a Settings.
-
-  ## Examples
-
-      iex> delete_settings(settings)
-      {:ok, %Settings{}}
-
-      iex> delete_settings(settings)
-      {:error, ...}
-
+  Resets settings to default
   """
-  def delete_settings(%Settings{} = settings) do
-    case Repo.delete(settings) do
-      {:ok, settings} -> {:ok, settings}
-      {:error, _} -> {:error, :not_found}
-    end
-  end
-
-  @doc """
-  Returns a changeset for tracking settings changes.
-
-  ## Examples
-
-      iex> change_settings(settings, attrs)
-      %Ecto.Changeset{...}
-
-  """
-  def change_settings(%Settings{} = settings, attrs \\ %{}) do
-    settings
-    |> Settings.changeset(attrs)
+  def reset_settings(%Settings{} = settings) do
+    update_settings(settings, @default_settings)
   end
 
 
@@ -109,8 +144,11 @@ defmodule QuestTrackr.Library do
       [%Game{}, ...]
 
   """
-  def list_games_in_library do
-    Repo.all(Game)
+  def list_games_in_library(%Settings{} = library) do
+    Repo.all(from g in Game, where: g.library_id == ^library.id)
+    |> Repo.preload(:game)
+    |> Repo.preload(:platform)
+    |> Repo.preload(:bundle)
   end
 
   @doc """
@@ -127,10 +165,15 @@ defmodule QuestTrackr.Library do
       ** (Ecto.NoResultsError)
 
   """
-  def get_game!(id), do: Repo.get!(Game, id)
+  def get_game!(id) do
+    Repo.get!(Game, id)
+    |> Repo.preload(:game)
+    |> Repo.preload(:platform)
+    |> Repo.preload(:bundle)
+  end
 
   @doc """
-  Creates a game.
+  Adds a game to the given library.
 
   ## Examples
 
@@ -141,9 +184,18 @@ defmodule QuestTrackr.Library do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_game(attrs \\ %{}) do
+  def add_game_to_library(%QuestTrackr.Data.Game{} = game_data, %Settings{} = library_settings) do
+    # TODO handle adding DLC games and bundle games
+
+    attrs = %{bought_for: :full,
+      ownership_status: :owned,
+      play_status: :unplayed}
+
+    # Default enum values are added to attributes
     %Game{}
     |> Game.changeset(attrs)
+    |> Ecto.Changeset.put_assoc(:library, library_settings)
+    |> Ecto.Changeset.put_assoc(:game, game_data)
     |> Repo.insert()
   end
 

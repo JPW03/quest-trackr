@@ -150,14 +150,7 @@ defmodule QuestTrackr.Data do
   """
   def search_games(search_term, limit \\ 25, opts \\ %{}) do
     # Prioritise perfect matches
-    results = try do
-      case Repo.get_by(Game, name: search_term) do
-        nil -> []
-        game -> [game]
-      end
-    catch
-      _ -> []
-    end
+    results = Repo.all(from g in Game, where: g.name == ^search_term)
 
     results = results ++ search_games_by_term(search_term)
     |> Enum.uniq_by(&(&1.id))
@@ -243,14 +236,13 @@ defmodule QuestTrackr.Data do
       |> handle_options(opts)}
     else
       case create_game(id) do
-        {:ok, game} -> {:new, game}
+        {:ok, game} ->
+          get_collections(game) # These 2 functions slow down creation significantly...
+          get_dlcs(game)        # TODO: Look into other creation optimisations (e.g. using IDs instead of full objects)
+          {:new, game |> handle_options(opts)}
+
         {:error, message} -> {:error, message}
       end
-      # If the game didn't already exist, it's impossible for it
-      #  to have any associated bundles or DLCs
-      #   (when a bundle is created, its included games are also created/
-      #    when a DLC is created, its parent game is also created)
-      # So we don't need to handle the options
     end
   end
 
