@@ -88,12 +88,16 @@ defmodule QuestTrackrWeb.Router do
   scope "/", QuestTrackrWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    # Note that the ID parameter in the below routes
+    # represent the ID of the Data.Game record, not the
+    # Library.Game record.
+
     live "/library", LibraryLive.Index, :index
     live "/library/new", LibraryLive.Index, :search_new
-    live "/library/new/:id", LibraryLive.Index, :new
-    live "/library/:id/edit", LibraryLive.Index, :edit
+    live "/library/new/:game_id", LibraryLive.Index, :new
+    live "/library/:game_id/edit", LibraryLive.Index, :edit
 
-    live "/library/:id", LibraryLive.Show, :show
-    live "/library/:id/show/edit", LibraryLive.Show, :edit
+    live "/library/:game_id", LibraryLive.Show, :show
+    live "/library/:game_id/show/edit", LibraryLive.Show, :edit
   end
 end

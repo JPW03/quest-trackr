@@ -457,7 +457,7 @@ defmodule QuestTrackr.Data do
       {:ok, game} -> Map.get(game, "bundles") || []
       {:error, _} -> []
     end
-    |> Enum.map(&(case get_game(&1) do
+    |> Enum.map(&(case get_game(&1["id"]) do
       {:error, _} -> nil
       {_, game} -> game
     end))

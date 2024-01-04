@@ -28,11 +28,14 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    game = Library.get_game!(id)
-    game_data = case Data.get_game(game.game.id, %{platforms: true, bundles: true}) do
+  defp apply_action(socket, :edit, %{"game_id" => id}) do
+    game_data = case Data.get_game(id, %{platforms: true, bundles: true}) do
       {:error, _} -> raise "No game found with id #{id}"
       {_, game_data} -> game_data
+    end
+    game = case Library.get_game_in_library(game_data, socket.assigns.library_settings) do
+      {:error, _} -> raise "Could not find this game in your library, nor add this game in library."
+      {_, game} -> game
     end
 
     socket
@@ -47,7 +50,7 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
     |> assign(:game, nil)
   end
 
-  defp apply_action(socket, :new, %{"id" => id}) do
+  defp apply_action(socket, :new, %{"game_id" => id}) do
     game_data = case Data.get_game(id, %{platforms: true, bundles: true}) do
       {:error, _} -> raise "No game found with id #{id}"
       {_, game_data} -> game_data
@@ -75,7 +78,7 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
   end
 
   @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
+  def handle_event("delete", %{"game_in_library_id" => id}, socket) do
     game = Library.get_game!(id)
     {:ok, _} = Library.delete_game(game)
 

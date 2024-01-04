@@ -134,6 +134,7 @@ defmodule QuestTrackr.Library do
 
 
   alias QuestTrackr.Library.Game
+  alias QuestTrackr.Data
 
   @doc """
   Returns the list of games_in_library.
@@ -146,9 +147,7 @@ defmodule QuestTrackr.Library do
   """
   def list_games_in_library(%Settings{} = library) do
     Repo.all(from g in Game, where: g.library_id == ^library.id)
-    |> Repo.preload(:game)
-    |> Repo.preload(:platform)
-    |> Repo.preload(:bundle)
+    |> load_all_assocs()
   end
 
   @doc """
@@ -167,10 +166,48 @@ defmodule QuestTrackr.Library do
   """
   def get_game!(id) do
     Repo.get!(Game, id)
+    |> load_all_assocs()
+  end
+
+  @doc """
+  Gets a single game in library from the given game and library (represented by its settings).
+
+  If it doesn't exist, it will be created.
+
+  ## Examples
+
+      # New game in library
+      iex> get_game_in_library(game, library)
+      {:new, %Library.Game{}}
+
+      # Old game in library
+      iex> get_game_in_library(game, library)
+      {:old, %Library.Game{}}
+
+      # Erroneous
+      iex> get_game_in_library(bad_game, library)
+      {:error, changeset}
+
+  """
+  def get_game_in_library(%Data.Game{} = game, %Settings{} = library) do
+    case Repo.get_by(Game, game_id: game.id, library_id: library.id) do
+      nil ->
+        case add_game_to_library(game, library) do
+          {:ok, game} -> {:new, game |> load_all_assocs()}
+          {:error, changeset} -> {:error, changeset}
+        end
+      game -> {:old, game |> load_all_assocs()}
+    end
+  end
+
+  defp load_all_assocs(game) do
+    game
     |> Repo.preload(:game)
     |> Repo.preload(:platform)
     |> Repo.preload(:bundle)
   end
+
+
 
   @doc """
   Adds a game to the given library.
