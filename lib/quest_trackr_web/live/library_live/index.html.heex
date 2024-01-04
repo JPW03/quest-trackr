@@ -44,12 +44,10 @@
   />
 </.modal>
 
-<.modal :if={@live_action in [:new, :edit]} id="game-modal" show on_cancel={JS.patch(~p"/library")}>
+<.modal :if={@live_action == :edit} id="game-modal" show on_cancel={JS.patch(~p"/library")}>
   <.live_component
     module={QuestTrackrWeb.LibraryLive.FormComponent}
-    id={@game.id || :new}
-    title={@page_title}
-    action={@live_action}
+    id={@game.id}
     game={@game}
     game_data={@game_data}
     patch={~p"/library"}

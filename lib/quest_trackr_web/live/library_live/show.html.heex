@@ -21,10 +21,8 @@
   <.live_component
     module={QuestTrackrWeb.LibraryLive.FormComponent}
     id={@game.id}
-    title={@page_title}
-    action={@live_action}
     game={@game}
     game_data={@game_data}
-    patch={~p"/library/#{@game}"}
+    patch={~p"/library/#{@game.game_id}"}
   />
 </.modal>

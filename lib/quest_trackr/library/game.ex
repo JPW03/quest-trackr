@@ -29,5 +29,8 @@ defmodule QuestTrackr.Library.Game do
     |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10) # Not doing anything?
     |> put_assoc(:platform, attrs[:platform])
     |> put_assoc(:bundle, attrs[:bundle])
+
+    # TODO: prevent duplicate games in the same library (same combo of game_id and library_id)
+    # (sounds high priority, but actually it's not possible in the front end for this to happen)
   end
 end

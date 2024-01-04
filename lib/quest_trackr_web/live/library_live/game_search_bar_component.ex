@@ -52,7 +52,7 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
         </:col>
 
         <:col :let={{_id, game}}>
-          <.link patch={"/library/new/#{game.id}"}>
+          <.link patch={"/library/#{game.id}/edit"}>
             <.button phx-disable-with="Adding...">
               Add to Library
             </.button>

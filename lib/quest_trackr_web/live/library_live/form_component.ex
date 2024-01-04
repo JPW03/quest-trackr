@@ -8,7 +8,7 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
     ~H"""
     <div>
       <.header>
-        <%= @title %>: <%= @game_data.name %>
+        Editing <%= @game_data.name %> in your library
         <:subtitle>Use this form to manage game records in your database.</:subtitle>
       </.header>
 
@@ -70,10 +70,10 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
   end
 
   def handle_event("save", %{"game" => game_params}, socket) do
-    save_game(socket, socket.assigns.action, game_params)
+    save_game(socket, game_params)
   end
 
-  defp save_game(socket, _, game_params) do
+  defp save_game(socket, game_params) do
     case Library.update_game(socket.assigns.game, game_params) do
       {:ok, game} ->
         notify_parent({:saved, game})

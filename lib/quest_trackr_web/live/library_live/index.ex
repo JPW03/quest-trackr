@@ -50,22 +50,6 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
     |> assign(:game, nil)
   end
 
-  defp apply_action(socket, :new, %{"game_id" => id}) do
-    game_data = case Data.get_game(id, %{platforms: true, bundles: true}) do
-      {:error, _} -> raise "No game found with id #{id}"
-      {_, game_data} -> game_data
-    end
-    game = case Library.add_game_to_library(game_data, socket.assigns.library_settings) do
-      {:ok, game} -> game
-      {:error, _} -> raise "Could not add game to library. It may already exist."
-    end
-
-    socket
-    |> assign(:page_title, "New Game")
-    |> assign(:game_data, game_data)
-    |> assign(:game, game)
-  end
-
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Listing Games in library")

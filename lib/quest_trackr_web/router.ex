@@ -94,7 +94,6 @@ defmodule QuestTrackrWeb.Router do
 
     live "/library", LibraryLive.Index, :index
     live "/library/new", LibraryLive.Index, :search_new
-    live "/library/new/:game_id", LibraryLive.Index, :new
     live "/library/:game_id/edit", LibraryLive.Index, :edit
 
     live "/library/:game_id", LibraryLive.Show, :show
