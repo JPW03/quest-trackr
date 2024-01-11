@@ -169,36 +169,39 @@ defmodule QuestTrackr.Library do
     |> load_all_assocs()
   end
 
-  @doc """
-  Gets a single game in library from the given game and library (represented by its settings).
+  # @doc """
+  # Gets a single game in library from the given game and library (represented by its settings).
 
-  If it doesn't exist, it will be created.
+  # If it doesn't exist, it will be created.
 
-  ## Examples
+  # ## Examples
 
-      # New game in library
-      iex> get_game_in_library(game, library)
-      {:new, %Library.Game{}}
+  #     # New game in library
+  #     iex> get_game_in_library(game, library)
+  #     {:new, %Library.Game{}}
 
-      # Old game in library
-      iex> get_game_in_library(game, library)
-      {:old, %Library.Game{}}
+  #     # Old game in library
+  #     iex> get_game_in_library(game, library)
+  #     {:old, %Library.Game{}}
 
-      # Erroneous
-      iex> get_game_in_library(bad_game, library)
-      {:error, changeset}
+  #     # Erroneous
+  #     iex> get_game_in_library(bad_game, library)
+  #     {:error, changeset}
 
-  """
-  def get_game_in_library(%Data.Game{} = game, %Settings{} = library) do
-    case Repo.get_by(Game, game_id: game.id, library_id: library.id) do
-      nil ->
-        case add_game_to_library(game, library) do
-          {:ok, game} -> {:new, game |> load_all_assocs()}
-          {:error, changeset} -> {:error, changeset}
-        end
-      game -> {:old, game |> load_all_assocs()}
-    end
-  end
+  # """
+  # NOT NECESSARY (FOR NOW)
+  #
+  # def get_game_in_library(%Data.Game{} = game, %Settings{} = library) do
+  #   case Repo.all(from g in Game, where: g.game_id == ^game.id and g.library_id == ^library.id) do
+  #     [] ->
+  #       case add_game_to_library(game, library) do
+  #         {:ok, game} -> {:new, game |> load_all_assocs()}
+  #         {:error, changeset} -> {:error, changeset}
+  #       end
+  #     [game] -> {:old, game |> load_all_assocs()}
+  #     multiple_games -> {:old, Enum.map(multiple_games, &load_all_assocs/1)}
+  #   end
+  # end
 
   defp load_all_assocs(game) do
     game
@@ -221,7 +224,7 @@ defmodule QuestTrackr.Library do
       {:error, %Ecto.Changeset{}}
 
   """
-  def add_game_to_library(%QuestTrackr.Data.Game{} = game_data, %Settings{} = library_settings) do
+  def add_game_to_library(%Data.Game{} = game_data, %Settings{} = library_settings) do
     # TODO handle adding DLC games and bundle games
 
     attrs = %{bought_for: :full,
@@ -234,6 +237,15 @@ defmodule QuestTrackr.Library do
     |> Ecto.Changeset.put_assoc(:library, library_settings)
     |> Ecto.Changeset.put_assoc(:game, game_data)
     |> Repo.insert()
+  end
+
+  @doc """
+  Checks if the given game is in the given library.
+  """
+  def game_in_library?(%Game{} = game, %Settings{} = library) do
+    Repo.all(from g in Game, where: g.game_id == ^game.id and g.library_id == ^library.id)
+    |> length()
+    |> Kernel.==(1)
   end
 
   @doc """

@@ -1,6 +1,8 @@
 defmodule QuestTrackrWeb.LibraryLive.Index do
   use QuestTrackrWeb, :live_view
 
+  import QuestTrackrWeb.LibraryLive
+
   alias QuestTrackr.Library
 
   @impl true
@@ -11,13 +13,18 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(%{"id" => id}, uri, socket) do
+    handle_params(%{}, uri, socket |> authenticate_game_in_library_id(id))
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :edit, _params) do
     socket
-    |> assign(:page_title, "Edit Game")
+    |> assign(:page_title, "Edit #{socket.assigns.game_data.name}")
   end
 
   defp apply_action(socket, :search_new, _params) do

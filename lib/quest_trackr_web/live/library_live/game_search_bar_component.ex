@@ -86,8 +86,7 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
 
   @impl true
   def handle_event("add_game", %{"game-id" => id}, socket) do
-    IO.inspect "adding game"
-    # TODO: handle adding duplicate games
+    # TODO: prompt user when adding a game that already exists in library
     raw_game = Data.get_game!(id)
     {:ok, game} = Library.add_game_to_library(raw_game, socket.assigns.library_settings)
     {:noreply, socket |> put_flash(:info, "#{raw_game.name} added to library") |> redirect(to: ~p"/library/#{game.id}/edit")}

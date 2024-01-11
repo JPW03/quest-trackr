@@ -90,8 +90,8 @@ defmodule QuestTrackrWeb.Router do
 
     live_session :library,
       on_mount: [{QuestTrackrWeb.UserAuth, :ensure_authenticated},
-      {QuestTrackrWeb.LibraryLive, :mount_settings},
-      {QuestTrackrWeb.LibraryLive, :authenticate_game_in_library_id}] do
+      {QuestTrackrWeb.LibraryLive, :mount_settings}] do
+
       live "/library", LibraryLive.Index, :index
       live "/library/new", LibraryLive.Index, :search_new
       live "/library/:id/edit", LibraryLive.Index, :edit
