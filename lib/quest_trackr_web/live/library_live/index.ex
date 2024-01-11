@@ -8,6 +8,7 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     games_in_library = Library.list_games_in_library(socket.assigns.library_settings)
+    |> Enum.sort_by(& &1.game.name, :asc)
 
     {:ok, socket |> stream(:games_in_library, games_in_library)}
   end

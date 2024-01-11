@@ -199,7 +199,10 @@ defmodule QuestTrackr.Data do
       ** (Ecto.NoResultsError)
 
   """
-  def get_game!(id), do: Repo.get!(Game, id)
+  def get_game!(id, opts \\ %{}) do
+    Repo.get!(Game, id)
+    |> handle_options(opts)
+  end
 
   @doc """
   Gets a single game.
@@ -462,6 +465,14 @@ defmodule QuestTrackr.Data do
       {_, game} -> game
     end))
     |> Enum.filter(&(&1 != nil))
+  end
+
+  def load_included_games(game) do
+    Repo.preload(game, :included_games)
+  end
+
+  def load_parent_game(game) do
+    Repo.preload(game, :parent_game)
   end
 
 end

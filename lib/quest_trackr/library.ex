@@ -214,22 +214,11 @@ defmodule QuestTrackr.Library do
 
   @doc """
   Adds a game to the given library.
-
-  ## Examples
-
-      iex> create_game(%{field: value})
-      {:ok, %Game{}}
-
-      iex> create_game(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
   """
-  def add_game_to_library(%Data.Game{} = game_data, %Settings{} = library_settings) do
-    # TODO handle adding DLC games and bundle games
-
-    attrs = %{bought_for: :full,
-      ownership_status: :owned,
-      play_status: :unplayed}
+  def add_game_to_library(%Data.Game{} = game_data, %Settings{} = library_settings,
+  attrs \\ %{bought_for: :full, ownership_status: :owned, play_status: :unplayed}) do
+    handle_dlc(game_data, library_settings)
+    handle_collection(game_data, library_settings)
 
     # Default enum values are added to attributes
     %Game{}
@@ -238,6 +227,26 @@ defmodule QuestTrackr.Library do
     |> Ecto.Changeset.put_assoc(:game, game_data)
     |> Repo.insert()
   end
+
+  def handle_dlc(%{dlc: true} = game_data, library_settings) do
+    # The parent game is manually preloaded on the offchance nested DLCs exist
+    Data.load_parent_game(game_data).parent_game
+    |> add_game_to_library(library_settings)
+  end
+  def handle_dlc(_game_data, _library_settings), do: nil
+
+  def handle_collection(%{collection: true} = game_data, library_settings) do
+    # The included games are manually preloaded to account for collections of other collections
+    # (looking at you Mega Man Legacy Collection 1 + 2)
+    attrs = %{bought_for: nil,
+    ownership_status: :collection,
+    bundle_id: game_data.id,
+    play_status: :unplayed}
+
+    Data.load_included_games(game_data).included_games
+    |> Enum.each(&add_game_to_library(&1, library_settings, attrs))
+  end
+  def handle_collection(_game_data, _library_settings), do: nil
 
   @doc """
   Checks if the given game is in the given library.

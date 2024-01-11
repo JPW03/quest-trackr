@@ -26,7 +26,6 @@ defmodule QuestTrackrWeb.LibraryLive do
           |> put_flash(:error, message)
           |> redirect(to: ~p"/library")
         {_, game_data} ->
-          IO.inspect "WORKED"
           socket
           |> Phoenix.Component.assign(:game, game)
           |> Phoenix.Component.assign(:game_data, game_data)
