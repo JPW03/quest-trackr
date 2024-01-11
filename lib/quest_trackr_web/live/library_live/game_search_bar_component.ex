@@ -1,4 +1,5 @@
 defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
+  alias QuestTrackr.Library
   use QuestTrackrWeb, :live_component
 
   alias QuestTrackr.Data
@@ -8,7 +9,6 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
   @impl true
   def mount(socket) do
     {:ok, socket
-    |> assign(:successful, false)
     |> assign(:form, to_form(%{"search_term" => ""}))
     |> stream(:game_results, Data.search_games("", @default_limit, %{platforms: true}))
     }
@@ -52,18 +52,21 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
         </:col>
 
         <:col :let={{_id, game}}>
-          <.link patch={"/library/#{game.id}/edit"}>
-            <.button phx-disable-with="Adding...">
-              Add to Library
-            </.button>
-          </.link>
+          <.button
+            phx-target={@myself}
+            phx-click="add_game"
+            phx-value-game-id={game.id}
+            phx-disable-with="Adding..."
+          >
+            Add to Library
+          </.button>
         </:col>
       </.table>
     </div>
     """
   end
 
-  # Note that "handle_event" can't function properly unless the event
+  # Note to self: "handle_event" can't function properly unless the event
   #  is called from an element that targets this component.
   # i.e. in render/1 'phx-target={@myself}'
   @impl true
@@ -79,6 +82,15 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
   def handle_event("search_games_s", %{"search_term" => search_term} = assigns, socket) do
     # This is basically filler to prevent the input from overriding itself
     handle_event("search_games", assigns, socket |> assign(:form, to_form(%{"search_term" => search_term})))
+  end
+
+  @impl true
+  def handle_event("add_game", %{"game-id" => id}, socket) do
+    IO.inspect "adding game"
+    # TODO: handle adding duplicate games
+    raw_game = Data.get_game!(id)
+    {:ok, game} = Library.add_game_to_library(raw_game, socket.assigns.library_settings)
+    {:noreply, socket |> put_flash(:info, "#{raw_game.name} added to library") |> redirect(to: ~p"/library/#{game.id}/edit")}
   end
 
 end

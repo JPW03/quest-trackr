@@ -10,7 +10,7 @@
 <.table
   id="games_in_library"
   rows={@streams.games_in_library}
-  row_click={fn {_id, game} -> JS.navigate(~p"/library/#{game.game_id}") end}
+  row_click={fn {_id, game} -> JS.navigate(~p"/library/#{game.id}") end}
 >
   <:col :let={{_id, game}} label="Title"><%= game.game.name %></:col>
   <:col :let={{_id, game}} label="Ownership status"><%= game.ownership_status %></:col>
@@ -23,11 +23,11 @@
     <div class="sr-only">
       <.link navigate={~p"/library/#{game}"}>Show</.link>
     </div>
-    <.link patch={~p"/library/#{game.game_id}/edit"}>Edit</.link>
+    <.link patch={~p"/library/#{game}/edit"}>Edit</.link>
   </:action>
   <:action :let={{id, game}}>
     <.link
-      phx-click={JS.push("delete", value: %{game_in_library_id: game.id}) |> hide("##{id}")}
+      phx-click={JS.push("delete", value: %{id: game.id}) |> hide("##{id}")}
       data-confirm="Are you sure?"
     >
       Delete
@@ -39,8 +39,8 @@
   <.live_component
     module={QuestTrackrWeb.LibraryLive.GameSearchBarComponent}
     id={:search_new}
-    title={@page_title}
     patch={~p"/library"}
+    library_settings={@library_settings}
   />
 </.modal>
 

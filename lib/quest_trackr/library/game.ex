@@ -3,7 +3,7 @@ defmodule QuestTrackr.Library.Game do
   import Ecto.Changeset
 
   @bought_for [:full, :sale, :free]
-  @ownership_status [:owned, :borrowed, :subscription, :household, :formerly_owned, :collection]
+  @ownership_status [:owned, :borrowed, :subscription, :household, :formerly_owned, :streamed, :collection]
   @play_status [:unplayed, :played]
 
   schema "games_in_library" do
