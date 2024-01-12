@@ -12,25 +12,49 @@
   rows={@streams.games_in_library}
   row_click={fn {_id, game} -> JS.navigate(~p"/library/#{game.id}") end}
 >
-  <:col :let={{_id, game}} label="Title"><%= game.game.name %></:col>
-  <:col :let={{_id, game}} label="Ownership status"><%= game.ownership_status %></:col>
-  <:col :let={{_id, game}} label="Play status"><%= game.play_status %></:col>
-  <:col :let={{_id, game}} label="Bought for"><%= game.bought_for %></:col>
-  <:col :let={{_id, game}} label="Rating"><%= game.rating %></:col>
-  <:col :let={{_id, game}} label="Date added"><%= game.inserted_at %></:col>
-  <:col :let={{_id, game}} label="Last updated"><%= game.updated_at %></:col>
+  <:col :let={{_id, game}}><%= game.game.name %></:col>
+  <:col :let={{_id, game}}>
+    <div class="w-12 h-12">
+      <img src={game.game.thumbnail_url} alt={game.game.name} class="w-12 h-12" />
+    </div>
+  </:col>
+  <:col :let={{_id, game}}>
+    <%= game.platform.name %>
+    <%= if game.emulated, do: "(Emulated)" %>
+  </:col>
+  <:col :let={{_id, game}}>
+    <%= if game.ownership_status == :collection do %>
+      Part of <%= game.bundle.game.name %>
+    <% else %>
+      <%= Game.get_ownership_status_readable game.ownership_status %>
+      <%= if game.ownership_status in [:owned, :streamed, :formerly_owned] do %>
+        (<%= Game.get_bought_for_readable game.bought_for %>)
+      <% end %>
+    <% end %>
+  </:col>
+  <:col :let={{_id, game}}><%= Game.get_play_status_readable game.play_status %></:col>
+  <:col :let={{_id, game}}><%= game.rating || "..." %> / 10</:col>
+  <:col :let={{_id, game}}>
+    <span class="text-xs">
+      <%= if game.updated_at > game.inserted_at do %>
+        Updated <%= game.updated_at.day %>/<%= game.updated_at.month %>/<%= game.updated_at.year %>
+      <% else %>
+        Added <%= game.inserted_at.day %>/<%= game.inserted_at.month %>/<%= game.inserted_at.year %>
+      <% end %>
+    </span>
+  </:col>
   <:action :let={{_id, game}}>
     <div class="sr-only">
       <.link navigate={~p"/library/#{game}"}>Show</.link>
     </div>
-    <.link patch={~p"/library/#{game}/edit"}>Edit</.link>
+    <.link patch={~p"/library/#{game}/edit"}><.icon name="hero-adjustments-horizontal" /></.link>
   </:action>
   <:action :let={{id, game}}>
     <.link
       phx-click={JS.push("delete", value: %{id: game.id}) |> hide("##{id}")}
       data-confirm="Are you sure?"
     >
-      Delete
+      <.icon name="hero-trash" />
     </.link>
   </:action>
 </.table>

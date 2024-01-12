@@ -4,6 +4,7 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
   import QuestTrackrWeb.LibraryLive
 
   alias QuestTrackr.Library
+  alias QuestTrackr.Library.Game
 
   @impl true
   def mount(_params, _session, socket) do
@@ -50,6 +51,5 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
 
     {:noreply, stream_delete(socket, :games_in_library, game)}
   end
-
 
 end

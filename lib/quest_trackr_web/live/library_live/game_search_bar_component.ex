@@ -92,7 +92,8 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
 
     # Handle DLC
     if raw_game.dlc do
-      Library.add_game_to_library(Data.load_parent_game(raw_game), socket.assigns.library_settings, default_platform)
+      (Data.load_parent_game(raw_game)).parent_game
+      |> Library.add_game_to_library( socket.assigns.library_settings, default_platform)
     end
     {:ok, game} = Library.add_game_to_library(raw_game, socket.assigns.library_settings, default_platform)
     # TODO: handle error case

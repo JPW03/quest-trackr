@@ -312,8 +312,9 @@ defmodule QuestTrackr.IGDB do
     end
   end
 
-  # Note that the cover art is a .png, the thumbnail is a .jpg
+  # Note that the cover art (big and small) is a .png, the thumbnail is a .jpg
   @cover_art_base_url "https://images.igdb.com/igdb/image/upload/t_cover_big/"
+  # @cover_art_small_base_url "https://images.igdb.com/igdb/image/upload/t_cover_small/"
   @cover_thumbnail_base_url "https://images.igdb.com/igdb/image/upload/t_thumb/"
 
   @doc """

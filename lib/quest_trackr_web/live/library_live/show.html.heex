@@ -10,14 +10,21 @@
   </:actions>
 </.header>
 
-<.list>
-  <:item title="Ownership status"><%= Game.get_ownership_status_readable @game.ownership_status %></:item>
-  <:item title="Play status"><%= Game.get_play_status_readable @game.play_status %></:item>
-  <:item title="Bought for"><%= Game.get_bought_for_readable @game.bought_for %></:item>
-  <:item title="Rating"><%= @game.rating || "..." %> / 10</:item>
-</.list>
 
-<.back navigate={~p"/library"}>Back to library</.back>
+<div class="flex mt-14">
+  <div class="w-1/5">
+    <img src={@game_data.artwork_url} />
+
+    <.back navigate={~p"/library"}>Back to library</.back>
+  </div>
+
+  <.list>
+    <:item title="Ownership status"><%= Game.get_ownership_status_readable @game.ownership_status %></:item>
+    <:item title="Play status"><%= Game.get_play_status_readable @game.play_status %></:item>
+    <:item title="Bought for"><%= Game.get_bought_for_readable @game.bought_for %></:item>
+    <:item title="Rating"><%= @game.rating || "..." %> / 10</:item>
+  </.list>
+</div>
 
 <.modal :if={@live_action == :edit} id="game-modal" show on_cancel={JS.patch(~p"/library/#{@game.id}")}>
   <.live_component

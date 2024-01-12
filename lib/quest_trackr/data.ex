@@ -415,7 +415,10 @@ defmodule QuestTrackr.Data do
   def update_game(%Game{} = game) do
     case IGDB.get_game_by_id(game.id) do
       {:ok, igdb_game} ->
-        %Game{}
+        game
+        |> Repo.preload(:platforms)
+        |> Repo.preload(:included_games)
+        |> Repo.preload(:parent_game)
         |> Game.changeset(convert_game_igdb_to_db(igdb_game))
         |> Repo.update()
 
@@ -460,7 +463,7 @@ defmodule QuestTrackr.Data do
       {:ok, game} -> Map.get(game, "bundles") || []
       {:error, _} -> []
     end
-    |> Enum.map(&(case get_game(&1["id"]) do
+    |> Enum.map(&(case get_game(&1) do
       {:error, _} -> nil
       {_, game} -> game
     end))

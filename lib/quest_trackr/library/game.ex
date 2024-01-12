@@ -2,7 +2,7 @@ defmodule QuestTrackr.Library.Game do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @bought_for [:full, :sale, :free]
+  @bought_for [:full, :sale, :free, :second_hand, :gift]
   @ownership_status [:owned, :borrowed, :subscription, :household, :formerly_owned, :streamed, :collection]
   @play_status [:unplayed, :played]
 
@@ -26,6 +26,8 @@ defmodule QuestTrackr.Library.Game do
     game
     |> cast(attrs, [:ownership_status, :play_status, :bought_for, :rating, :emulated, :platform_id, :bundle_id])
     |> validate_required([:play_status, :platform_id])
+    # TODO: Bought for is not relevant for games that are not bought individually
+    # |> validate_compatible_ownership_and_bought()
     |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10) # Not doing anything?
   end
 
@@ -58,7 +60,9 @@ defmodule QuestTrackr.Library.Game do
     [
       {"Full price", :full},
       {"On sale", :sale},
-      {"Free", :free}
+      {"Free", :free},
+      {"Second hand", :second_hand},
+      {"Gift", :gift}
     ]
   end
 
@@ -67,6 +71,8 @@ defmodule QuestTrackr.Library.Game do
       :full -> "Full price"
       :sale -> "On sale"
       :free -> "Free"
+      :second_hand -> "Second hand"
+      :gift -> "Gift"
       nil -> "Can't remember"
     end
   end

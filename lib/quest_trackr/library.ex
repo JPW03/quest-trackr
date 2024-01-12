@@ -216,7 +216,9 @@ defmodule QuestTrackr.Library do
         game
       end
     else
-      game
+      (Enum.filter(game, &(&1.ownership_status == :collection))
+      |> Enum.map(&Map.replace(&1, :bundle, load_all_assocs(&1.bundle)))) ++
+      Enum.filter(game, &(&1.ownership_status != :collection))
     end
   end
 
