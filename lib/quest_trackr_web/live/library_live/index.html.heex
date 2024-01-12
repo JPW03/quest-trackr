@@ -1,5 +1,5 @@
 <.header>
-  Listing Games in library
+  Your Library
   <:actions>
     <.link patch={~p"/library/new"}>
       <.button>Add Game</.button>
@@ -23,14 +23,7 @@
     <%= if game.emulated, do: "(Emulated)" %>
   </:col>
   <:col :let={{_id, game}}>
-    <%= if game.ownership_status == :collection do %>
-      Part of <%= game.bundle.game.name %>
-    <% else %>
-      <%= Game.get_ownership_status_readable game.ownership_status %>
-      <%= if game.ownership_status in [:owned, :streamed, :formerly_owned] do %>
-        (<%= Game.get_bought_for_readable game.bought_for %>)
-      <% end %>
-    <% end %>
+    <%= Game.get_full_readable_ownership(game) %>
   </:col>
   <:col :let={{_id, game}}><%= Game.get_play_status_readable game.play_status %></:col>
   <:col :let={{_id, game}}><%= game.rating || "..." %> / 10</:col>

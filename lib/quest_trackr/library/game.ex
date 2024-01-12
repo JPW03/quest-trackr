@@ -56,6 +56,26 @@ defmodule QuestTrackr.Library.Game do
     end
   end
 
+  def bought_for_valid_ownership_status_list() do
+    [:owned, :formerly_owned, :streamed]
+  end
+
+  def get_full_readable_ownership(game) do
+    if game.ownership_status == :collection do
+      "Part of " <> game.bundle.game.name
+    else
+      status = get_ownership_status_readable(game.ownership_status)
+
+      bought_for = if game.ownership_status in bought_for_valid_ownership_status_list() do
+        " (" <> get_bought_for_readable(game.bought_for) <> ")"
+      else
+        ""
+      end
+
+      status <> bought_for
+    end
+  end
+
   def bought_for_list() do
     [
       {"Full price", :full},
