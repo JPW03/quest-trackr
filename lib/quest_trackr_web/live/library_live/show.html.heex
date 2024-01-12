@@ -1,6 +1,8 @@
 <.header>
   <%= @game.game.name %>
-  <:subtitle>This is a game record from your database.</:subtitle>
+  <:subtitle>
+    <%= @game.platform.name %><%= if @game.ownership_status == :collection do %>, part of <%= @game.bundle.game.name %><% end %>
+  </:subtitle>
   <:actions>
     <.link patch={~p"/library/#{@game.id}/show/edit"} phx-click={JS.push_focus()}>
       <.button>Edit game</.button>
@@ -9,10 +11,10 @@
 </.header>
 
 <.list>
-  <:item title="Ownership status"><%= @game.ownership_status %></:item>
-  <:item title="Play status"><%= @game.play_status %></:item>
-  <:item title="Bought for"><%= @game.bought_for %></:item>
-  <:item title="Rating"><%= @game.rating %></:item>
+  <:item title="Ownership status"><%= Game.get_ownership_status_readable @game.ownership_status %></:item>
+  <:item title="Play status"><%= Game.get_play_status_readable @game.play_status %></:item>
+  <:item title="Bought for"><%= Game.get_bought_for_readable @game.bought_for %></:item>
+  <:item title="Rating"><%= @game.rating || "..." %> / 10</:item>
 </.list>
 
 <.back navigate={~p"/library"}>Back to library</.back>

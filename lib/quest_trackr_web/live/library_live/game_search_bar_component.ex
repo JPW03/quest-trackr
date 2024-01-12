@@ -87,8 +87,22 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
   @impl true
   def handle_event("add_game", %{"game-id" => id}, socket) do
     # TODO: prompt user when adding a game that already exists in library
-    raw_game = Data.get_game!(id)
-    {:ok, game} = Library.add_game_to_library(raw_game, socket.assigns.library_settings)
+    raw_game = Data.get_game!(id, %{platforms: true})
+    default_platform = List.first(raw_game.platforms)
+
+    # Handle DLC
+    if raw_game.dlc do
+      Library.add_game_to_library(Data.load_parent_game(raw_game), socket.assigns.library_settings, default_platform)
+    end
+    {:ok, game} = Library.add_game_to_library(raw_game, socket.assigns.library_settings, default_platform)
+    # TODO: handle error case
+
+    # Handle collections
+    if raw_game.collection do
+      raw_included_games = (Data.load_included_games(raw_game)).included_games
+      Enum.map(raw_included_games, fn g -> Library.add_game_in_collection_to_library(g, socket.assigns.library_settings, default_platform, game) end)
+    end
+
     {:noreply, socket |> put_flash(:info, "#{raw_game.name} added to library") |> redirect(to: ~p"/library/#{game.id}/edit")}
   end
 

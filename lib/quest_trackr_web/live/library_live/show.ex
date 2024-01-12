@@ -2,6 +2,7 @@ defmodule QuestTrackrWeb.LibraryLive.Show do
   use QuestTrackrWeb, :live_view
 
   import QuestTrackrWeb.LibraryLive
+  alias QuestTrackr.Library.Game
 
   @impl true
   def mount(_params, _session, socket) do

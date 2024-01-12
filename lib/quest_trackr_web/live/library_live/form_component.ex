@@ -19,27 +19,30 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <.input
-          field={@form[:ownership_status]}
-          type="select"
-          label="Ownership status"
-          prompt="Choose a value"
-          options={Ecto.Enum.values(QuestTrackr.Library.Game, :ownership_status)}
-        />
-        <.input
-          field={@form[:play_status]}
-          type="select"
-          label="Play status"
-          prompt="Choose a value"
-          options={Ecto.Enum.values(QuestTrackr.Library.Game, :play_status)}
-        />
-        <.input
-          field={@form[:bought_for]}
-          type="select"
-          label="Bought for"
-          prompt="Choose a value"
-          options={Ecto.Enum.values(QuestTrackr.Library.Game, :bought_for)}
-        />
+        <%= if @game.ownership_status != :collection do %>
+          <.input
+            field={@form[:platform_id]}
+            type="select"
+            label="Platform"
+            prompt="Choose a platform"
+            options={Enum.map(@game_data.platforms, &{&1.name, &1.id})}
+          />
+          <.input field={@form[:emulated]} type="checkbox" label="Emulated?" />
+          <.input
+            field={@form[:ownership_status]}
+            type="select"
+            label="Ownership status"
+            prompt="Other"
+            options={Library.Game.ownership_status_list()}
+          />
+          <.input
+            field={@form[:bought_for]}
+            type="select"
+            label="Bought for"
+            prompt="Can't remember"
+            options={Library.Game.bought_for_list()}
+          />
+        <% end %>
         <.input field={@form[:rating]} type="number" label="Rating" step="any" />
         <:actions>
           <.button phx-disable-with="Saving...">Save Game</.button>
