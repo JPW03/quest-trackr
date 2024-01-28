@@ -163,6 +163,15 @@ defmodule QuestTrackr.IGDB do
 
   @excluded_categories [:mod, :update, :season]
 
+  @doc """
+  Returns the list of category numbers accepted by the website.
+  """
+  def get_accepted_categories do
+    @categories
+    |> Enum.filter(fn {_, c} -> c not in @excluded_categories end)
+    |> Enum.map(&(elem(&1, 0)))
+  end
+
   defp get_accepted_categories_string do
     list_to_igdb_query_string(@categories
     |> Enum.filter(fn (c) ->
@@ -183,6 +192,15 @@ defmodule QuestTrackr.IGDB do
   ]
 
   @excluded_status [:rumored, :cancelled]
+
+  @doc """
+  Returns the list of status numbers accepted by the website
+  """
+  def get_accepted_statuses do
+    @status
+    |> Enum.filter(fn {_, s} -> s not in @excluded_status end)
+    |> Enum.map(&(elem(&1, 0)))
+  end
 
   defp get_accepted_statuses_string do
     list_to_igdb_query_string(@status
@@ -255,9 +273,18 @@ defmodule QuestTrackr.IGDB do
   def search_games_by_name(name, n_of_results \\ 50) do
     query(
       "#{@base_url}games/",
-      "fields id; search \"#{name}\"; limit #{n_of_results + 1};"
+      "fields status, category, id; search \"#{name}\"; limit #{n_of_results + 1};"
     ) # for some reason IGDB returns a list of size (limit - 1)
+    |> handle_search_results()
   end
+  defp handle_search_results({:ok, games}) do
+    {:ok,
+    games
+    |> Enum.filter(fn (%{"category" => category}) -> category in get_accepted_categories() end)
+    |> Enum.filter(fn g -> if g["status"], do: g["status"] in get_accepted_statuses(), else: true end)
+    |> Enum.map(fn (%{"id" => id}) -> id end)}
+  end
+  defp handle_search_results(other), do: other
 
   defp list_to_igdb_query_string([_|_] = list) do
     "(" <> Enum.join(list, ",") <> ")"

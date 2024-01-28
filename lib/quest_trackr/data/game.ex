@@ -39,6 +39,7 @@ defmodule QuestTrackr.Data.Game do
     |> validate_if_collection(attrs)
     |> validate_if_dlc(attrs)
     |> validate_required([:id, :name, :dlc, :collection])
+    |> unique_constraint(:id, name: :games_pkey)
   end
 
   defp validate_if_dlc(changeset, %{"dlc" => true} = attrs) do

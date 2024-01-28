@@ -115,7 +115,7 @@ defmodule QuestTrackr.Data do
   def update_platform(%Platform{} = platform) do
     case IGDB.get_platform_by_id(platform.id) do
       {:ok, igdb_platform} ->
-        %Platform{}
+        platform
         |> Platform.changeset(convert_platform_igdb_to_db(igdb_platform))
         |> Repo.update()
 
@@ -150,39 +150,78 @@ defmodule QuestTrackr.Data do
   """
   def search_games(search_term, limit \\ 25, opts \\ %{}) do
     # Prioritise perfect matches
-    results = Repo.all(from g in Game, where: g.name == ^search_term)
-
-    results = results ++ search_games_by_term(search_term)
+    perfect_results = Repo.all(from g in Game, where: ilike(g.name, ^search_term))
+    other_results = search_games_by_term(search_term)
+    results = (perfect_results ++ other_results)
     |> Enum.uniq_by(&(&1.id))
 
-    if length(results) <= limit do
-      new_results =
-        case IGDB.search_games_by_name(search_term, limit * 2) do
-          {:ok, games} ->
-            games
-            |> Enum.map(&(&1["id"]))
-            |> Enum.filter(fn game_id -> game_id not in Enum.map(results, &(&1.id)) end)
-            |> Enum.map(&(case get_game(&1, opts) do
-              {:error, _} -> nil
-              {_, game} -> game
-            end))
-            |> Enum.filter(&(&1 != nil))
-          {:error, _} -> []
-        end
-
-      results ++ new_results
+    {if length(results) > limit do
+      :ok
     else
-      results
-    end
-    |> Enum.uniq_by(&(&1.id))
+      :empty
+    end,
+
+    results
     |> Enum.take(limit)
-    |> handle_options(opts)
+    |> handle_options(opts)}
   end
 
   defp search_games_by_term(search_term) do
     query = from g in Game, where:
-      ilike(g.name, ^"%#{search_term}%")
+      ilike(g.name, ^"%#{String.replace(search_term, " ", "%")}%"),
+      order_by: [desc: g.updated_at]
     Repo.all(query)
+  end
+
+  @doc """
+  Returns a list of games from the DB to extend search results.
+
+  ## Examples
+
+        # If there are more than 10 results left in the DB
+        iex> extend_search_games_db([123, 456], "Halo", 10)
+        {:ok, [%Game{}, ...]}
+
+        # If there are less than or equal to 10 results left in the DB
+        iex> extend_search_games_db([123, 456, ...], "Halo", 10)
+        {:empty, [%Game{}, ...]}
+  """
+  def extend_search_games_db(prev_result_ids, search_term, limit, opts \\ %{}) do
+    query = from g in Game, where:
+      ilike(g.name, ^"%#{search_term}%") and
+      g.id not in ^prev_result_ids,
+      order_by: [desc: g.updated_at]
+    results = Repo.all(query)
+
+    {if length(results) > limit do
+      :ok
+    else
+      :empty
+    end,
+
+    results
+    |> Enum.take(limit)
+    |> handle_options(opts)}
+  end
+
+  @doc """
+  Returns a list of newly loaded games to extend search results.
+  Searches IGDB for games and filters out games already in the search results
+  """
+  def extend_search_games_igdb(prev_result_ids, search_term, limit, opts \\ %{}) do
+    case IGDB.search_games_by_name(search_term, length(prev_result_ids) + limit) do
+      {:ok, game_ids} ->
+        game_ids
+        |> Enum.filter(fn game_id -> game_id not in prev_result_ids end)
+        |> Enum.map(&(case get_game(&1, opts) do
+          {:error, changeset} ->
+            IO.inspect changeset
+            nil
+          {_, game} -> game
+        end))
+        |> Enum.filter(&(&1 != nil))
+      {:error, _} -> []
+    end
   end
 
   @doc """
@@ -240,8 +279,10 @@ defmodule QuestTrackr.Data do
     else
       case create_game(id) do
         {:ok, game} ->
-          get_collections(game) # These 2 functions slow down creation significantly...
-          get_dlcs(game)        # TODO: Look into other creation optimisations (e.g. using IDs instead of full objects)
+          # These 2 functions slow down creation significantly...
+          # TODO: Look into other creation optimisations (e.g. using IDs instead of full objects, or moving these functions elsewhere, or using ecto multi)
+          # Task.async(get_collections(game))
+          # Task.async(get_dlcs(game))
           {:new, game |> handle_options(opts)}
 
         {:error, message} -> {:error, message}

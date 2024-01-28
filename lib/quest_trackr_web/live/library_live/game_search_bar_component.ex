@@ -8,9 +8,15 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
 
   @impl true
   def mount(socket) do
+    {status, game_results} = Data.search_games("", @default_limit, %{platforms: true})
+
     {:ok, socket
     |> assign(:form, to_form(%{"search_term" => ""}))
-    |> stream(:game_results, Data.search_games("", @default_limit, %{platforms: true}))
+    |> assign(:current_search_term, "")
+    |> assign(:db_depleted, status == :empty)
+    |> assign(:igdb_depleted, false)
+    |> assign(:game_result_ids, Enum.map(game_results, &(&1.id)))
+    |> stream(:game_results, game_results)
     }
   end
 
@@ -23,10 +29,11 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
         id="game-search-form"
         phx-target={@myself}
         phx-change="search_games"
-        phx-submit="search_games_s"
+        phx-submit="search_games"
       >
         <.input
           field={@form[:search_term]}
+          value={@current_search_term}
           type="text"
           placeholder="Search games..."
           phx-debounce="1500"
@@ -46,7 +53,7 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
             <%= game.name %>
             <span class="font-normal text-zinc-500"><%= game.release_date.year %></span>
             <span class="font-normal text-xs text-zinc-500">
-              (<%= Enum.join(Enum.map(game.platforms, fn pl -> pl.abbreviation end), ", ") %>)
+              (<%= Enum.join(Enum.map(game.platforms, fn pl -> pl.abbreviation || pl.alternative_name end), ", ") %>)
             </span>
           </p>
         </:col>
@@ -62,6 +69,19 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
           </.button>
         </:col>
       </.table>
+
+      <%= if @igdb_depleted do %>
+        <p class="text-center italic text-zinc-500" class="">End of search results</p>
+      <% else %>
+        <.button
+          phx-target={@myself}
+          phx-click="load_more"
+          phx-disable-with="Loading..."
+          phx-value-search_term={@current_search_term}
+        >
+          Load more games.
+        </.button>
+      <% end %>
     </div>
     """
   end
@@ -71,17 +91,34 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
   # i.e. in render/1 'phx-target={@myself}'
   @impl true
   def handle_event("search_games", %{"search_term" => search_term}, socket) do
-    results = Data.search_games(search_term, @default_limit, %{platforms: true})
+    {status, results} = Data.search_games(search_term, @default_limit, %{platforms: true})
 
     {:noreply,
     socket
+    |> assign(:db_depleted, status == :empty)
+    |> assign(:igdb_depleted, false)
+    |> assign(:current_search_term, search_term)
+    |> assign(:game_result_ids, Enum.map(results, &(&1.id)))
     |> stream(:game_results, results, reset: true)}
   end
 
+  @extra_load_limit 10
+
   @impl true
-  def handle_event("search_games_s", %{"search_term" => search_term} = assigns, socket) do
-    # This is basically filler to prevent the input from overriding itself
-    handle_event("search_games", assigns, socket |> assign(:form, to_form(%{"search_term" => search_term})))
+  def handle_event("load_more", %{"search_term" => search_term}, socket) do
+    {status, results} = case socket.assigns.db_depleted do
+      true ->
+        {:empty, Data.extend_search_games_igdb(socket.assigns.game_result_ids, search_term, @extra_load_limit, %{platforms: true})}
+      false ->
+        Data.extend_search_games_db(socket.assigns.game_result_ids, search_term, @extra_load_limit, %{platforms: true})
+    end
+
+    {:noreply,
+    socket
+    |> assign(:db_depleted, status == :empty)
+    |> assign(:igdb_depleted, results == [])
+    |> assign(:game_result_ids, socket.assigns.game_result_ids ++ Enum.map(results, &(&1.id)))
+    |> stream(:game_results, results)}
   end
 
   @impl true

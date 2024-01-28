@@ -18,6 +18,6 @@ defmodule QuestTrackr.Data.Platform do
   def changeset(platform, attrs) do
     platform
     |> cast(attrs, [:igdb_id, :name, :abbreviation, :alternative_name, :logo_image_url])
-    |> validate_required([:igdb_id, :name, :abbreviation])
+    |> validate_required([:igdb_id, :name])
   end
 end
