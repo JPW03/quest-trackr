@@ -1,0 +1,38 @@
+<.header>
+  Quest <%= @quest.id %>
+  <:subtitle>This is a quest record from your database.</:subtitle>
+  <:actions>
+    <.link patch={~p"/quests/#{@quest}/show/edit"} phx-click={JS.push_focus()}>
+      <.button>Edit quest</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="Completion status"><%= @quest.completion_status %></:item>
+  <:item title="Name"><%= @quest.name %></:item>
+  <:item title="Description"><%= @quest.description %></:item>
+  <:item title="Game version"><%= @quest.game_version %></:item>
+  <:item title="Playthrough url"><%= @quest.playthrough_url %></:item>
+  <:item title="Modded"><%= @quest.modded %></:item>
+  <:item title="Mod name"><%= @quest.mod_name %></:item>
+  <:item title="Mod url"><%= @quest.mod_url %></:item>
+  <:item title="Progress notes"><%= @quest.progress_notes %></:item>
+  <:item title="Date of start"><%= @quest.date_of_start %></:item>
+  <:item title="Date of status"><%= @quest.date_of_status %></:item>
+  <:item title="Fun rating"><%= @quest.fun_rating %></:item>
+  <:item title="Public"><%= @quest.public %></:item>
+</.list>
+
+<.back navigate={~p"/quests"}>Back to quests</.back>
+
+<.modal :if={@live_action == :edit} id="quest-modal" show on_cancel={JS.patch(~p"/quests/#{@quest}")}>
+  <.live_component
+    module={QuestTrackrWeb.QuestLive.EditQuestComponent}
+    id={@quest.id}
+    title={@page_title}
+    action={@live_action}
+    quest={@quest}
+    patch={~p"/quests/#{@quest}"}
+  />
+</.modal>

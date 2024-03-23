@@ -132,6 +132,11 @@ defmodule QuestTrackr.Library do
     update_settings(settings, @default_settings)
   end
 
+  def load_quests(%Settings{} = library) do
+    (library |> Repo.preload(:quests)).quests
+    |> load_all_assocs()
+  end
+
 
   alias QuestTrackr.Library.Game
   alias QuestTrackr.Data

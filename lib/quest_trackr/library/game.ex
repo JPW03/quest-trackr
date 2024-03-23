@@ -18,6 +18,8 @@ defmodule QuestTrackr.Library.Game do
     belongs_to :platform, QuestTrackr.Data.Platform
     belongs_to :bundle, QuestTrackr.Library.Game, foreign_key: :bundle_id
 
+    has_many :quests, QuestTrackr.Quests.Quest, foreign_key: :game_in_library_id
+
     timestamps()
   end
 
@@ -31,6 +33,12 @@ defmodule QuestTrackr.Library.Game do
     |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10) # Not doing anything?
   end
 
+  @doc """
+  Returns the list of game ownership statuses in a tuple list, formatted as
+  {"Readable name", :atom_name}.
+
+  Intended to be passed as the option parameter of a simple_form select input.
+  """
   def ownership_status_list() do
     [
       {"Owned", :owned},

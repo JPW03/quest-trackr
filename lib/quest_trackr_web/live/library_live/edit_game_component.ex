@@ -1,4 +1,4 @@
-defmodule QuestTrackrWeb.LibraryLive.FormComponent do
+defmodule QuestTrackrWeb.LibraryLive.EditGameComponent do
   use QuestTrackrWeb, :live_component
 
   alias QuestTrackr.Library
@@ -73,10 +73,6 @@ defmodule QuestTrackrWeb.LibraryLive.FormComponent do
   end
 
   def handle_event("save", %{"game" => game_params}, socket) do
-    save_game(socket, game_params)
-  end
-
-  defp save_game(socket, game_params) do
     case Library.update_game(socket.assigns.game, game_params) do
       {:ok, game} ->
         notify_parent({:saved, game})

@@ -1,0 +1,62 @@
+<.header>
+  Listing Quests
+  <:actions>
+    <.link patch={~p"/quests/new"}>
+      <.button>New Quest</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.table
+  id="quests"
+  rows={@streams.quests}
+  row_click={fn {_id, quest} -> JS.navigate(~p"/quests/#{quest}") end}
+>
+  <:col :let={{_id, quest}} label="Completion status"><%= quest.completion_status %></:col>
+  <:col :let={{_id, quest}} label="Name"><%= quest.name %></:col>
+  <:col :let={{_id, quest}} label="Description"><%= quest.description %></:col>
+  <:col :let={{_id, quest}} label="Game version"><%= quest.game_version %></:col>
+  <:col :let={{_id, quest}} label="Playthrough url"><%= quest.playthrough_url %></:col>
+  <:col :let={{_id, quest}} label="Modded"><%= quest.modded %></:col>
+  <:col :let={{_id, quest}} label="Mod name"><%= quest.mod_name %></:col>
+  <:col :let={{_id, quest}} label="Mod url"><%= quest.mod_url %></:col>
+  <:col :let={{_id, quest}} label="Progress notes"><%= quest.progress_notes %></:col>
+  <:col :let={{_id, quest}} label="Date of start"><%= quest.date_of_start %></:col>
+  <:col :let={{_id, quest}} label="Date of status"><%= quest.date_of_status %></:col>
+  <:col :let={{_id, quest}} label="Fun rating"><%= quest.fun_rating %></:col>
+  <:col :let={{_id, quest}} label="Public"><%= quest.public %></:col>
+  <:action :let={{_id, quest}}>
+    <div class="sr-only">
+      <.link navigate={~p"/quests/#{quest}"}>Show</.link>
+    </div>
+    <.link patch={~p"/quests/#{quest}/edit"}>Edit</.link>
+  </:action>
+  <:action :let={{id, quest}}>
+    <.link
+      phx-click={JS.push("delete", value: %{id: quest.id}) |> hide("##{id}")}
+      data-confirm="Are you sure?"
+    >
+      Delete
+    </.link>
+  </:action>
+</.table>
+
+<.modal :if={@live_action == :edit} id="quest-modal" show on_cancel={JS.patch(~p"/quests")}>
+  <.live_component
+    module={QuestTrackrWeb.QuestLive.EditQuestComponent}
+    id={@quest.id}
+    title={@page_title}
+    quest={@quest}
+    patch={~p"/quests"}
+  />
+</.modal>
+
+<.modal :if={@live_action == :new} id="quest-modal" show on_cancel={JS.patch(~p"/quests")}>
+  <.live_component
+    module={QuestTrackrWeb.QuestLive.NewQuestComponent}
+    id="new-quest"
+    title={@page_title}
+    patch={~p"/quests"}
+    library_settings={@library_settings}
+  />
+</.modal>

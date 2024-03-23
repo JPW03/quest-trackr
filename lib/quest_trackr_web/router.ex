@@ -92,12 +92,22 @@ defmodule QuestTrackrWeb.Router do
       on_mount: [{QuestTrackrWeb.UserAuth, :ensure_authenticated},
       {QuestTrackrWeb.LibraryLive, :mount_settings}] do
 
+      # The library
       live "/library", LibraryLive.Index, :index
       live "/library/new", LibraryLive.Index, :search_new
       live "/library/:id/edit", LibraryLive.Index, :edit
 
       live "/library/:id", LibraryLive.Show, :show
       live "/library/:id/show/edit", LibraryLive.Show, :edit
+
+      # The quests
+      live "/quests", QuestLive.Index, :index
+      live "/quests/new", QuestLive.Index, :new
+      live "/quests/:id/edit", QuestLive.Index, :edit
+
+      live "/quests/:id", QuestLive.Show, :show
+      live "/quests/:id/show/edit", QuestLive.Show, :edit
     end
   end
+
 end

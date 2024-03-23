@@ -281,8 +281,8 @@ defmodule QuestTrackr.Data do
         {:ok, game} ->
           # These 2 functions slow down creation significantly...
           # TODO: Look into other creation optimisations (e.g. using IDs instead of full objects, or moving these functions elsewhere, or using ecto multi)
-          # Task.async(get_collections(game))
-          # Task.async(get_dlcs(game))
+          Task.async(get_collections(game))
+          Task.async(get_dlcs(game))
           {:new, game |> handle_options(opts)}
 
         {:error, message} -> {:error, message}

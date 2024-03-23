@@ -63,7 +63,7 @@
 
 <.modal :if={@live_action == :edit} id="game-modal" show on_cancel={JS.patch(~p"/library")}>
   <.live_component
-    module={QuestTrackrWeb.LibraryLive.FormComponent}
+    module={QuestTrackrWeb.LibraryLive.EditGameComponent}
     id={@game.id}
     game={@game}
     game_data={@game_data}

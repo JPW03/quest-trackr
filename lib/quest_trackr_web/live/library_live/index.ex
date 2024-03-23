@@ -40,7 +40,7 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
   end
 
   @impl true
-  def handle_info({QuestTrackrWeb.LibraryLive.FormComponent, {:saved, game}}, socket) do
+  def handle_info({QuestTrackrWeb.LibraryLive.EditGameComponent, {:saved, game}}, socket) do
     {:noreply, stream_insert(socket, :games_in_library, game)}
   end
 
