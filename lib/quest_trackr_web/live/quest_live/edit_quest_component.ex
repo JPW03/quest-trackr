@@ -27,7 +27,6 @@ defmodule QuestTrackrWeb.QuestLive.EditQuestComponent do
         <.input field={@form[:game_version]} type="text" label="Game version" />
         <.modded_input form={@form} />
         <.status_input form={@form} />
-        <.input field={@form[:public]} type="checkbox" label="Public" />
         <:actions>
           <.button phx-disable-with="Saving...">Save Quest</.button>
         </:actions>
@@ -51,6 +50,14 @@ defmodule QuestTrackrWeb.QuestLive.EditQuestComponent do
     changeset =
       socket.assigns.quest
       |> Quests.change_quest(quest_params)
+      |> (fn cs -> # if completion status changes, update date of status
+        if Ecto.Changeset.changed?(cs, :completion_status) do
+          cs
+          |> Ecto.Changeset.put_change(:date_of_status, Date.utc_today())
+        else
+          cs
+        end
+      end).()
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}

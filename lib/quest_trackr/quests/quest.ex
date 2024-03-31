@@ -6,8 +6,8 @@ defmodule QuestTrackr.Quests.Quest do
 
   schema "quests" do
     field :completion_status, Ecto.Enum, values: @completion_statuses
-    field :date_of_start, :naive_datetime
-    field :date_of_status, :naive_datetime
+    field :date_of_start, :date
+    field :date_of_status, :date, default: Date.utc_today()
     field :description, :string
     field :fun_rating, :integer
     field :game_version, :string
@@ -62,7 +62,7 @@ defmodule QuestTrackr.Quests.Quest do
   @unix_epoch DateTime.from_unix!(0)
   defp handle_pre_sign_up(%{"pre_sign_up" => "true"} = attrs) do
     Map.put(attrs, "date_of_start", @unix_epoch)
-      |> Map.put("date_of_status", @unix_epoch)
+    |> Map.put("date_of_status", @unix_epoch)
   end
   defp handle_pre_sign_up(attrs), do: attrs
 

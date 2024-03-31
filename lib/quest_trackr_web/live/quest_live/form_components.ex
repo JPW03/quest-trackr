@@ -64,10 +64,14 @@ defmodule QuestTrackrWeb.QuestLive.FormComponents do
   def completed_status_input(assigns) do
     ~H"""
     <div>
-      <.input field={@form[:pre_sign_up]} type="checkbox" label="Completed before signing up? (When sorting by date, this quest will appear lowest)" />
+      <.input
+        field={@form[:pre_sign_up]}
+        type="checkbox"
+        label="Completed before signing up? (When sorting by date, this quest will appear lowest)"
+      />
       <%= unless @form[:pre_sign_up].value == "true" do %>
-        <.input field={@form[:date_of_start]} type="datetime-local" label="Date of start" />
-        <.input field={@form[:date_of_status]} type="datetime-local" label="Date of completion" />
+        <.input field={@form[:date_of_start]} type="date" label="Date of start" />
+        <.input field={@form[:date_of_status]} type="date" label="Date of completion" />
       <% end %>
       <.input field={@form[:fun_rating]} type="number" label="Fun rating" />
       <.input field={@form[:playthrough_url]} type="text" label="Playthrough URL" />
@@ -80,9 +84,13 @@ defmodule QuestTrackrWeb.QuestLive.FormComponents do
   def playing_status_input(assigns) do
     ~H"""
     <div>
-      <.input field={@form[:pre_sign_up]} type="checkbox" label="Started playing before signing up? (When sorting by date, this quest will appear lowest)" />
+      <.input
+        field={@form[:pre_sign_up]}
+        type="checkbox"
+        label="Started playing before signing up? (When sorting by date, this quest will appear lowest)"
+      />
       <%= unless @form[:pre_sign_up].value == "true" do %>
-        <.input field={@form[:date_of_start]} type="datetime-local" label="Date of start" />
+        <.input field={@form[:date_of_start]} type="date" label="Date of start" />
       <% end %>
       <.input field={@form[:progress_notes]} type="textarea" label="Progress notes" />
     </div>
@@ -93,10 +101,14 @@ defmodule QuestTrackrWeb.QuestLive.FormComponents do
   def paused_status_input(assigns) do
     ~H"""
     <div>
-      <.input field={@form[:pre_sign_up]} type="checkbox" label="Paused before signing up? (When sorting by date, this quest will appear lowest)" />
+      <.input
+        field={@form[:pre_sign_up]}
+        type="checkbox"
+        label="Paused before signing up? (When sorting by date, this quest will appear lowest)"
+      />
       <%= unless @form[:pre_sign_up].value == "true" do %>
-        <.input field={@form[:date_of_start]} type="datetime-local" label="Date of start" />
-        <.input field={@form[:date_of_status]} type="datetime-local" label="Date of pause" />
+        <.input field={@form[:date_of_start]} type="date" label="Date of start" />
+        <.input field={@form[:date_of_status]} type="date" label="Date of pause" />
       <% end %>
       <.input field={@form[:progress_notes]} type="textarea" label="Progress notes" />
     </div>
@@ -107,10 +119,14 @@ defmodule QuestTrackrWeb.QuestLive.FormComponents do
   def given_up_status_input(assigns) do
     ~H"""
     <div>
-      <.input field={@form[:pre_sign_up]} type="checkbox" label="Given up before signing up? (When sorting by date, this quest will appear lowest)" />
+      <.input
+        field={@form[:pre_sign_up]}
+        type="checkbox"
+        label="Given up before signing up? (When sorting by date, this quest will appear lowest)"
+      />
       <%= unless @form[:pre_sign_up].value == "true" do %>
-        <.input field={@form[:date_of_start]} type="datetime-local" label="Date of start" />
-        <.input field={@form[:date_of_status]} type="datetime-local" label="Date of giving up" />
+        <.input field={@form[:date_of_start]} type="date" label="Date of start" />
+        <.input field={@form[:date_of_status]} type="date" label="Date of giving up" />
       <% end %>
       <.input field={@form[:progress_notes]} type="textarea" label="Progress notes" />
       <.input field={@form[:fun_rating]} type="number" label="Fun rating" />
