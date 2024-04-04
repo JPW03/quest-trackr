@@ -40,7 +40,8 @@ defmodule QuestTrackrWeb.LibraryLive.GameSearchBarComponent do
         />
 
         <!-- Loading wheel TODO -->
-        <p class="hidden-unless-loading">Loading...</p>
+        <%!-- <p class="hidden-unless-loading">Loading...</p> --%>
+        <%!-- See assets/tailwind.config.js for classes like "phx-click-loading:..." --%>
         <!-- Refresh button TODO -->
       </.simple_form>
 
