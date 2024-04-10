@@ -2,16 +2,14 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
   use QuestTrackrWeb, :live_view
 
   import QuestTrackrWeb.LibraryLive
+  import QuestTrackrWeb.GameComponents
 
   alias QuestTrackr.Library
   alias QuestTrackr.Library.Game
 
   @impl true
   def mount(_params, _session, socket) do
-    games_in_library = Library.list_games_in_library(socket.assigns.library_settings)
-    |> Enum.sort_by(& &1.game.name, :asc)
-
-    {:ok, socket |> stream(:games_in_library, games_in_library)}
+    {:ok, socket |> stream_games_in_library()}
   end
 
   @impl true
@@ -39,6 +37,7 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
     |> assign(:page_title, "Listing Games in library")
   end
 
+
   @impl true
   def handle_info({QuestTrackrWeb.LibraryLive.EditGameComponent, {:saved, game}}, socket) do
     {:noreply, stream_insert(socket, :games_in_library, game)}
@@ -50,6 +49,19 @@ defmodule QuestTrackrWeb.LibraryLive.Index do
     {:ok, _} = Library.delete_game(game)
 
     {:noreply, stream_delete(socket, :games_in_library, game)}
+  end
+
+  def handle_event("toggle_display_type", _params, socket) do
+    {_, updated_library} = Library.toggle_display_type(socket.assigns.library_settings)
+
+    {:noreply, socket |> assign(:library_settings, updated_library) |> stream_games_in_library()}
+  end
+
+  defp stream_games_in_library(socket) do
+    games_in_library = Library.list_games_in_library(socket.assigns.library_settings)
+    |> Enum.sort_by(& &1.game.name, :asc)
+
+    socket |> stream(:games_in_library, games_in_library)
   end
 
 end

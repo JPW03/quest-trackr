@@ -137,6 +137,19 @@ defmodule QuestTrackr.Library do
     |> load_all_assocs()
   end
 
+  @doc """
+  Toggles the default display type of the library settings between shelves and list.
+  Updates the database with the new value.
+  """
+  def toggle_display_type(%Settings{} = settings) do
+    new_display_type = case settings.default_display_type do
+      :shelves -> :list
+      :list -> :shelves
+    end
+
+    update_settings(settings, %{default_display_type: new_display_type})
+  end
+
 
   alias QuestTrackr.Library.Game
   alias QuestTrackr.Data
@@ -209,22 +222,10 @@ defmodule QuestTrackr.Library do
   # end
 
   defp load_all_assocs(game) do
-    game = game
-    |> Repo.preload(:game)
+    game
+    |> Repo.preload(game: [:parent_game])
     |> Repo.preload(:platform)
-    |> Repo.preload(:bundle)
-
-    if not is_list(game) do
-      if game.ownership_status == :collection do
-        Map.replace(game, :bundle, load_all_assocs(game.bundle))
-      else
-        game
-      end
-    else
-      (Enum.filter(game, &(&1.ownership_status == :collection))
-      |> Enum.map(&Map.replace(&1, :bundle, load_all_assocs(&1.bundle)))) ++
-      Enum.filter(game, &(&1.ownership_status != :collection))
-    end
+    |> Repo.preload(bundle: [:game, :platform, :bundle])
   end
 
   @doc """

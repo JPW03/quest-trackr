@@ -1,5 +1,17 @@
 <.header>
   Your Library
+  <:subtitle>
+    <label for="toggle_display" class="cursor-pointer flex items-center">
+      <span class="dark:text-zinc-100 text-zinc-900 mr-1">Display as </span>
+      <.button phx-click="toggle_display_type" name="toggle_display" class="text-xs p-0">
+        <%= if @library_settings.default_display_type == :shelves do %>
+          <.icon name="hero-squares-2x2" />
+        <% else %>
+          <.icon name="hero-bars-3" />
+        <% end %>
+      </.button>
+    </label>
+  </:subtitle>
   <:actions>
     <.link patch={~p"/library/new"}>
       <.button>Add Game</.button>
@@ -7,50 +19,61 @@
   </:actions>
 </.header>
 
-<.table
-  id="games_in_library"
-  rows={@streams.games_in_library}
-  row_click={fn {_id, game} -> JS.navigate(~p"/library/#{game.id}") end}
->
-  <:col :let={{_id, game}}><%= game.game.name %></:col>
-  <:col :let={{_id, game}}>
-    <div class="w-12 h-12">
-      <img src={game.game.thumbnail_url} alt={game.game.name} class="w-12 h-12" />
-    </div>
-  </:col>
-  <:col :let={{_id, game}}>
-    <%= game.platform.name %>
-    <%= if game.emulated, do: "(Emulated)" %>
-  </:col>
-  <:col :let={{_id, game}}>
-    <%= Game.get_full_readable_ownership(game) %>
-  </:col>
-  <:col :let={{_id, game}}><%= Game.get_play_status_readable game.play_status %></:col>
-  <:col :let={{_id, game}}><%= game.rating || "..." %> / 10</:col>
-  <:col :let={{_id, game}}>
-    <span class="text-xs">
-      <%= if game.updated_at > game.inserted_at do %>
-        Updated <%= game.updated_at.day %>/<%= game.updated_at.month %>/<%= game.updated_at.year %>
-      <% else %>
-        Added <%= game.inserted_at.day %>/<%= game.inserted_at.month %>/<%= game.inserted_at.year %>
-      <% end %>
-    </span>
-  </:col>
-  <:action :let={{_id, game}}>
-    <div class="sr-only">
-      <.link navigate={~p"/library/#{game}"}>Show</.link>
-    </div>
-    <.link patch={~p"/library/#{game}/edit"}><.icon name="hero-adjustments-horizontal" /></.link>
-  </:action>
-  <:action :let={{id, game}}>
-    <.link
-      phx-click={JS.push("delete", value: %{id: game.id}) |> hide("##{id}")}
-      data-confirm="Are you sure?"
-    >
-      <.icon name="hero-trash" />
-    </.link>
-  </:action>
-</.table>
+<%= if @library_settings.default_display_type == :list do %>
+  <.table
+    id="games_in_library"
+    rows={@streams.games_in_library}
+    row_click={fn {_id, game} -> JS.navigate(~p"/library/#{game.id}") end}
+  >
+    <:col :let={{_id, game}}><%= game.game.name %></:col>
+    <:col :let={{_id, game}}>
+      <div class="w-12 h-12">
+        <img src={game.game.thumbnail_url} alt={game.game.name} class="w-12 h-12" />
+      </div>
+    </:col>
+    <:col :let={{_id, game}}>
+      <%= game.platform.name %>
+      <%= if game.emulated, do: "(Emulated)" %>
+    </:col>
+    <:col :let={{_id, game}}>
+      <%= Game.get_full_readable_ownership(game) %>
+    </:col>
+    <:col :let={{_id, game}}><%= Game.get_play_status_readable game.play_status %></:col>
+    <:col :let={{_id, game}}><%= game.rating || "..." %> / 10</:col>
+    <:col :let={{_id, game}}>
+      <span class="text-xs">
+        <%= if game.updated_at > game.inserted_at do %>
+          Updated <%= game.updated_at.day %>/<%= game.updated_at.month %>/<%= game.updated_at.year %>
+        <% else %>
+          Added <%= game.inserted_at.day %>/<%= game.inserted_at.month %>/<%= game.inserted_at.year %>
+        <% end %>
+      </span>
+    </:col>
+    <:action :let={{_id, game}}>
+      <div class="sr-only">
+        <.link navigate={~p"/library/#{game}"}>Show</.link>
+      </div>
+      <.link patch={~p"/library/#{game}/edit"}><.icon name="hero-adjustments-horizontal" /></.link>
+    </:action>
+    <:action :let={{id, game}}>
+      <.link
+        phx-click={JS.push("delete", value: %{id: game.id}) |> hide("##{id}")}
+        data-confirm="Are you sure?"
+      >
+        <.icon name="hero-trash" />
+      </.link>
+    </:action>
+  </.table>
+<% else %>
+  <div class="w-full flex flex-row flex-wrap">
+    <.game_in_library_card 
+      :for={{stream_id, game} <- @streams.games_in_library}
+      game_in_library={game}
+      id={stream_id}
+      phx-click={JS.navigate(~p"/library/#{game.id}")}
+    />
+  </div>
+<% end %>
 
 <.modal :if={@live_action == :search_new} id="game-add" show on_cancel={JS.patch(~p"/library")}>
   <.live_component
