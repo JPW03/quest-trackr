@@ -2,13 +2,21 @@
 </script>
 <header class="px-4 sm:px-6 lg:px-8">
   <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 py-3 text-sm">
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-4 text-zinc-900 dark:text-zinc-100">
       <a href="/">
         <img src={~p"/images/logo.svg"} width="36" />
       </a>
       <p class="bg-brand/5 text-brand rounded-full px-2 font-medium leading-6">
         v<%= Application.spec(:phoenix, :vsn) %>
       </p>
+      <%= if @current_user do %>
+        <a href="/library" class="rounded-lg bg-zinc-100 dark:bg-zinc-900 px-2 py-1 hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80">
+          Library
+        </a>
+        <a href="/quests" class="rounded-lg bg-zinc-100 dark:bg-zinc-900 px-2 py-1 hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80">
+          Quests
+        </a>
+      <% end %>
     </div>
     <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
       <.theme_toggle />
