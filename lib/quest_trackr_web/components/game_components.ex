@@ -35,11 +35,11 @@ defmodule QuestTrackrWeb.GameComponents do
     ~H"""
     <img
       src={@game_in_library.game.artwork_url}
-      class="w-36 h-48 drop-shadow-md m-2 cursor-pointer"
+      class="w-36 h-48 drop-shadow-md m-2 cursor-pointer
+             hover:transition-transform hover:scale-105"
       {@rest}
     />
     """
-    # TODO add a transition so it pops outwards on hover
   end
 
   defp dlc_game_in_library_card(assigns) do

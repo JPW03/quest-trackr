@@ -351,6 +351,7 @@ defmodule QuestTrackrWeb.CoreComponents do
           "mt-2 block w-full rounded-lg text-zinc-900 dark:text-zinc-100 focus:ring-0 sm:text-sm sm:leading-6",
           "min-h-[6rem] phx-no-feedback:border-zinc-300 dark:phx-no-feedback:border-zinc-700",
           "phx-no-feedback:focus:border-zinc-400 dark:phx-no-feedback:focus:border-zinc-600",
+          "bg-white dark:bg-black",
           @errors == [] && "border-zinc-300 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-600",
           @errors != [] && "border-rose-400 dark:border-rose-600 focus:border-rose-400 dark:focus:border-rose-600"
         ]}

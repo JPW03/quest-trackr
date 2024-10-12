@@ -7,6 +7,7 @@ defmodule QuestTrackr.Library.Game do
   @play_status [:unplayed, :played]
 
   schema "games_in_library" do
+    # TODO: refactor so game_in_library.id is replaced by a compound key of library_id and game_id
     field :bought_for, Ecto.Enum, values: @bought_for
     field :ownership_status, Ecto.Enum, values: @ownership_status
     field :play_status, Ecto.Enum, values: @play_status
