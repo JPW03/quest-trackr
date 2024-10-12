@@ -61,6 +61,8 @@ defmodule QuestTrackr.Data do
   If an entry doesn't exist for a platform, a new one is created.
   """
   def get_platforms_by_igdb_id_list(igdb_id_list) do
+    # date_threshold_to_update = API.datetime_add(NaiveDateTime.utc_now(), -1, "year")
+    # ^ figure out why this doesn't work ? TODO (removed API alias)
     existing_platforms = Repo.all(
       from p in Platform,
       where: p.igdb_id in ^igdb_id_list and
@@ -113,7 +115,7 @@ defmodule QuestTrackr.Data do
 
   """
   def update_platform(%Platform{} = platform) do
-    case IGDB.get_platform_by_id(platform.id) do
+    case IGDB.get_platform_by_id(platform.igdb_id) do
       {:ok, igdb_platform} ->
         platform
         |> Platform.changeset(convert_platform_igdb_to_db(igdb_platform))
@@ -124,11 +126,11 @@ defmodule QuestTrackr.Data do
     end
   end
 
-  defp convert_platform_igdb_to_db(platform) do
-    platform
-    |> Map.put("igdb_id", Map.get(platform, "id"))
+  defp convert_platform_igdb_to_db(igdb_platform) do
+    igdb_platform
+    |> Map.put("igdb_id", Map.get(igdb_platform, "id"))
     |> Map.delete("id")
-    |> Map.put("logo_image_url", case IGDB.get_platform_logo_url(Map.get(platform, "platform_logo")) do
+    |> Map.put("logo_image_url", case IGDB.get_platform_logo_url(Map.get(igdb_platform, "platform_logo")) do
       {:ok, url} -> url
       {:error, _} -> ""
     end
