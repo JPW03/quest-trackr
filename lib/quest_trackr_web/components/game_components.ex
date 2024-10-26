@@ -5,9 +5,9 @@ defmodule QuestTrackrWeb.GameComponents do
 
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
-  alias QuestTrackr.Data
-  import QuestTrackrWeb.Gettext
+  # alias Phoenix.LiveView.JS
+  # alias QuestTrackr.Data
+  # import QuestTrackrWeb.Gettext
 
   @doc """
   Renders a card for a game in a library.
@@ -43,7 +43,7 @@ defmodule QuestTrackrWeb.GameComponents do
   end
 
   defp dlc_game_in_library_card(assigns) do
-    parent_game = assigns.game_in_library.game.parent_game
+    # parent_game = assigns.game_in_library.game.parent_game
     # ~H"""
     # <div
     #   class="w-36 h-48 m-2 cursor-pointer relative"

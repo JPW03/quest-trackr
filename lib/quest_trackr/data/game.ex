@@ -13,6 +13,9 @@ defmodule QuestTrackr.Data.Game do
     field :release_date, :naive_datetime
     field :thumbnail_url, :string
 
+    # API specific IDs (to reduce coupling with API)
+    field :igdb_id, :integer
+
     belongs_to :parent_game, QuestTrackr.Data.Game
 
     many_to_many :platforms, QuestTrackr.Data.Platform, join_through: "games_platforms", on_replace: :delete
@@ -34,12 +37,17 @@ defmodule QuestTrackr.Data.Game do
   @doc false
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:id, :name, :dlc, :collection, :alternative_names, :keywords, :franchise_name, :artwork_url, :thumbnail_url, :release_date])
+    |> cast(attrs, [:igdb_id, :name, :dlc, :collection, :alternative_names,
+      :keywords, :franchise_name, :artwork_url, :thumbnail_url, :release_date])
     |> put_assoc(:platforms, attrs["platforms"])
     |> validate_if_collection(attrs)
     |> validate_if_dlc(attrs)
-    |> validate_required([:id, :name, :dlc, :collection])
-    |> unique_constraint(:id, name: :games_pkey)
+    |> validate_required([:igdb_id, :name, :dlc, :collection])
+    |> unique_constraint(
+      :igdb_id,
+      message: "A game in IGDB must correspond to one game.",
+      name: :igdb_id_unique_constraint
+    )
   end
 
   defp validate_if_dlc(changeset, %{"dlc" => true} = attrs) do

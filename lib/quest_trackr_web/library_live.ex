@@ -13,23 +13,19 @@ defmodule QuestTrackrWeb.LibraryLive do
   Authenticate that the game in the library belongs to the current user, and assign it to the connection.
   """
   def authenticate_game_in_library_id(socket, id) do
-    # TODO: handle the below function's exception
+    # Don't handle the exceptions thrown by *.get_game!
+    # (if it raises anything, something else is broken)
+    # https://hexdocs.pm/elixir/main/try-catch-and-rescue.html#fail-fast-let-it-crash
     game = Library.get_game!(id)
     if game.library_id != socket.assigns.library_settings.id do
       socket
       |> put_flash(:error, "You do not have access.")
       |> redirect(to: ~p"/library")
     else
-      case Data.get_game(game.game.id, %{platforms: true, bundles: true}) do
-        {:error, message} ->
-          socket
-          |> put_flash(:error, message)
-          |> redirect(to: ~p"/library")
-        {_, game_data} ->
-          socket
-          |> Phoenix.Component.assign(:game, game)
-          |> Phoenix.Component.assign(:game_data, game_data)
-      end
+      game_data = Data.get_game!(game.game.id, %{platforms: true, bundles: true})
+      socket
+      |> Phoenix.Component.assign(:game, game)
+      |> Phoenix.Component.assign(:game_data, game_data)
     end
   end
 

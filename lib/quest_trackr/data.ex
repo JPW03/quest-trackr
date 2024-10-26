@@ -212,10 +212,10 @@ defmodule QuestTrackr.Data do
   """
   def extend_search_games_igdb(prev_result_ids, search_term, limit, opts \\ %{}) do
     case IGDB.search_games_by_name(search_term, length(prev_result_ids) + limit) do
-      {:ok, game_ids} ->
-        game_ids
-        |> Enum.filter(fn game_id -> game_id not in prev_result_ids end)
-        |> Enum.map(&(case get_game(&1, opts) do
+      {:ok, game_igdb_ids} ->
+        game_igdb_ids
+        |> Enum.filter(fn game_igdb_id -> game_igdb_id not in prev_result_ids end)
+        |> Enum.map(&(case get_game_from_igdb(&1, opts) do
           {:error, changeset} ->
             IO.inspect changeset
             nil
@@ -230,6 +230,13 @@ defmodule QuestTrackr.Data do
   Gets a single game.
 
   (Strict) Raises `Ecto.NoResultsError` if the Game does not exist.
+
+  Options (all `false` by default):
+  * `:parent_game` - The game is preloaded with the parent_game association
+  * `:dlcs` - The game is preloaded with the dlcs association
+  * `:included_games` - The game is preloaded with the included_games association
+  * `:bundles` - The game is preloaded with the bundles association
+  * `:platforms` - The game is preloaded with the platforms association
 
   ## Examples
 
@@ -248,7 +255,33 @@ defmodule QuestTrackr.Data do
   @doc """
   Gets a single game.
 
-  If it doesn't exist, a new one is created from IGDB.
+  Returns nil if the Game does not exist.
+
+  Options (all `false` by default):
+  * `:parent_game` - The game is preloaded with the parent_game association
+  * `:dlcs` - The game is preloaded with the dlcs association
+  * `:included_games` - The game is preloaded with the included_games association
+  * `:bundles` - The game is preloaded with the bundles association
+  * `:platforms` - The game is preloaded with the platforms association
+
+  ## Examples
+
+      iex> get_game(123)
+      %Game{}
+
+      iex> get_game(456)
+      nil
+
+  """
+  def get_game(id, opts \\ %{}) do
+    Repo.get(Game, id)
+    |> handle_options(opts)
+  end
+
+  @doc """
+  Gets a single game from its IGDB ID.
+
+  Initially attempts to get from the DB first. If not found, it creates the game from the IGDB API.
 
   Options (all `false` by default):
   * `:parent_game` - The game is preloaded with the parent_game association
@@ -262,34 +295,59 @@ defmodule QuestTrackr.Data do
   ## Examples
 
       # Non-existant game
-      iex> get_game(123)
+      iex> get_game_from_igdb(123)
       {:new, %Game{}}
 
       # Existant game
-      iex> get_game(456)
+      iex> get_game_from_igdb(456)
       {:old, %Game{}}
 
       # Invalid ID
-      iex> get_game("abc")
+      iex> get_game_from_igdb("abc")
       {:error, "Invalid ID"}
   """
-  def get_game(id, opts \\ %{}) do
-    if Repo.exists?(from g in Game, where: g.id == ^id) do
+  def get_game_from_igdb(igdb_id, opts \\ %{}) do
+    if Repo.exists?(from g in Game, where: g.igdb_id == ^igdb_id) do
       {:old,
-      Repo.get(Game, id)
+      Repo.get_by(Game, igdb_id: igdb_id)
       |> handle_options(opts)}
     else
-      case create_game(id) do
+      case create_game(igdb_id) do
         {:ok, game} ->
           # These 2 functions slow down creation significantly...
-          # TODO: Look into other creation optimisations (e.g. using IDs instead of full objects, or moving these functions elsewhere, or using ecto multi)
-          Task.async(get_collections(game))
-          Task.async(get_dlcs(game))
+          # TODO: Look into other creation optimisations
+          #       (e.g. using IDs instead of full objects, or moving these functions elsewhere, or using ecto multi, or Task.async())
+          get_collections_from_igdb(game)
+          get_dlcs_from_igdb(game)
           {:new, game |> handle_options(opts)}
 
         {:error, message} -> {:error, message}
       end
     end
+  end
+
+  defp get_dlcs_from_igdb(game) do
+    case IGDB.get_dlc_games_of(game.igdb_id) do
+      {:ok, dlcs} -> dlcs
+      {:error, _} -> []
+    end
+    |> Enum.map(&(case get_game_from_igdb(&1["id"]) do
+      {:error, _} -> nil
+      {_, game} -> game
+    end))
+    |> Enum.filter(&(&1 != nil))
+  end
+
+  defp get_collections_from_igdb(game) do
+    case IGDB.get_game_by_id(game.igdb_id) do
+      {:ok, game} -> Map.get(game, "bundles") || []
+      {:error, _} -> []
+    end
+    |> Enum.map(&(case get_game_from_igdb(&1) do
+      {:error, _} -> nil
+      {_, game} -> game
+    end))
+    |> Enum.filter(&(&1 != nil))
   end
 
   defp handle_options(game, %{parent_game: true} = opts) do
@@ -344,7 +402,10 @@ defmodule QuestTrackr.Data do
   end
 
   defp convert_game_igdb_to_db(igdb_game) do
-    franchise_id = Map.get(igdb_game, "franchise") || List.first(Map.get(igdb_game, "franchises") || [], [])
+    franchise_id = Map.get(
+      igdb_game, "franchise") || List.first(Map.get(igdb_game, "franchises") || [],
+      []
+    )
     category = Map.get(igdb_game, "category")
 
     # Collapse certain IGDB attributes to respective strings
@@ -356,7 +417,9 @@ defmodule QuestTrackr.Data do
       {:ok, themes} -> themes
       {:error, _} -> []
     end
-    alternative_names = case IGDB.get_alternative_names_by_id_list(Map.get(igdb_game, "alternative_names") || []) do
+    alternative_names = case IGDB.get_alternative_names_by_id_list(
+      Map.get(igdb_game, "alternative_names") || []
+    ) do
       {:ok, names} -> names
       {:error, _} -> []
     end
@@ -372,6 +435,14 @@ defmodule QuestTrackr.Data do
       end
     end
 
+    get_datetime_first_release_date =
+      fn game ->
+        case DateTime.from_unix(Map.get(game, "first_release_date") || 0) do
+          {:ok, date} -> date
+          {:error, _} -> nil
+        end
+      end
+
     # CONVERTED GAME MAP
     igdb_game
 
@@ -380,35 +451,28 @@ defmodule QuestTrackr.Data do
     |> Map.delete("themes")
     |> Map.replace("alternative_names", alternative_names)
 
-    # Franchise
     |> Map.put("franchise_name", franchise_name)
     |> Map.delete("franchise")
     |> Map.delete("franchises")
 
-    # Release date
-    |> Map.put("release_date", case DateTime.from_unix(Map.get(igdb_game, "first_release_date") || 0) do
-      {:ok, date} -> date
-      {:error, _} -> nil
-    end)
+    |> Map.put("release_date", get_datetime_first_release_date.(igdb_game))
     |> Map.delete("first_release_date")
 
-    # Artwork URLs
     |> Map.put("artwork_url", artwork_url)
     |> Map.put("thumbnail_url", thumbnail_url)
     |> Map.delete("cover")
 
-    # Type of game
     |> Map.put("dlc", category in IGDB.get_dlc_categories())
     |> Map.put("collection", category in IGDB.get_bundle_categories())
 
-    # Add associated platforms
     |> Map.put("platforms", get_platforms_by_igdb_id_list(Map.get(igdb_game, "platforms") || []))
 
-    # Handle DLCs and collections
-    |> handle_dlc_convertion()
-    |> handle_collection_convertion()
+    |> handle_dlc_conversion()
+    |> handle_collection_conversion()
 
-    # Remove all other
+    |> Map.put("igdb_id", Map.get(igdb_game, "id"))
+    |> Map.delete("id")
+
     |> Map.delete("dlcs")
     |> Map.delete("expansions")
     |> Map.delete("standalone_expansions")
@@ -416,29 +480,29 @@ defmodule QuestTrackr.Data do
     |> Map.delete("status")
   end
 
-  defp handle_dlc_convertion(%{"dlc" => false} = game) do
+  defp handle_dlc_conversion(%{"dlc" => false} = game) do
     Map.delete(game, "parent_game")
   end
-  defp handle_dlc_convertion(%{"dlc" => true, "parent_game" => parent_game_id} = game) do
+  defp handle_dlc_conversion(%{"dlc" => true, "parent_game" => parent_game_igdb_id} = game) do
     game
-    |> Map.put("parent_game_id", parent_game_id)
-    |> Map.put("parent_game", case get_game(parent_game_id) do
+    |> Map.put("parent_game_id", parent_game_igdb_id)
+    |> Map.put("parent_game", case get_game_from_igdb(parent_game_igdb_id) do
       {:error, _} -> nil
       {_, game} -> game
     end)
   end
 
-  defp handle_collection_convertion(%{"collection" => false} = game), do: game
-  defp handle_collection_convertion(%{"collection" => true} = game) do
+  defp handle_collection_conversion(%{"collection" => false} = game), do: game
+  defp handle_collection_conversion(%{"collection" => true} = game) do
     game
     |> Map.put("included_games",
     case IGDB.get_games_included_in(game["id"]) do
       {:ok, included_games} -> included_games
       {:error, _} -> []
     end
-    |> Enum.map(&(case get_game(&1["id"]) do
+    |> Enum.map(&(case get_game_from_igdb(&1["id"]) do
       {:error, _} -> nil
-      {_, game} -> game
+      {_, included_game} -> included_game
     end))
     |> Enum.filter(&(&1 != nil)))
   end
@@ -448,15 +512,15 @@ defmodule QuestTrackr.Data do
 
   ## Examples
 
-      iex> update_game(game, %{field: new_value})
+      iex> update_game_from_igdb(game, %{field: new_value})
       {:ok, %Game{}}
 
-      iex> update_game(game, %{field: bad_value})
+      iex> update_game_from_igdb(game, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_game(%Game{} = game) do
-    case IGDB.get_game_by_id(game.id) do
+  def update_game_from_igdb(%Game{} = game) do
+    case IGDB.get_game_by_id(game.igdb_id) do
       {:ok, igdb_game} ->
         game
         |> Repo.preload(:platforms)
@@ -481,36 +545,6 @@ defmodule QuestTrackr.Data do
   """
   def change_game(%Game{} = game, attrs \\ %{}) do
     Game.changeset(game, attrs)
-  end
-
-  @doc """
-  Returns a list of DLCs for a game.
-  """
-  def get_dlcs(game) do
-    case IGDB.get_dlc_games_of(game.id) do
-      {:ok, dlcs} -> dlcs
-      {:error, _} -> []
-    end
-    |> Enum.map(&(case get_game(&1["id"]) do
-      {:error, _} -> nil
-      {_, game} -> game
-    end))
-    |> Enum.filter(&(&1 != nil))
-  end
-
-  @doc """
-  Returns a list of collections containing a game.
-  """
-  def get_collections(game) do
-    case IGDB.get_game_by_id(game.id) do
-      {:ok, game} -> Map.get(game, "bundles") || []
-      {:error, _} -> []
-    end
-    |> Enum.map(&(case get_game(&1) do
-      {:error, _} -> nil
-      {_, game} -> game
-    end))
-    |> Enum.filter(&(&1 != nil))
   end
 
   def load_included_games(game) do
