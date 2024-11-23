@@ -5,18 +5,23 @@ defmodule QuestTrackr.Quests.Quest do
   @completion_statuses [:completed, :playing, :paused, :given_up, :not_started]
 
   schema "quests" do
-    field :completion_status, Ecto.Enum, values: @completion_statuses
-    field :date_of_start, :date
-    field :date_of_status, :date, default: Date.utc_today()
-    field :description, :string
-    field :fun_rating, :integer
-    field :game_version, :string
-    field :mod_name, :string
-    field :mod_url, :string
-    field :modded, :boolean, default: false
     field :name, :string
+    field :description, :string
+
+    field :completion_status, Ecto.Enum, values: @completion_statuses
     field :playthrough_url, :string
     field :progress_notes, :string
+    field :fun_rating, :integer
+    field :difficulty_rating, :integer
+
+    field :game_version, :string
+    field :modded, :boolean, default: false
+    field :mod_name, :string
+    field :mod_url, :string
+
+    field :date_of_start, :date
+    field :date_of_status, :date, default: Date.utc_today()
+
     field :public, :boolean, default: false
 
     belongs_to :library, QuestTrackr.Library.Settings
@@ -32,7 +37,7 @@ defmodule QuestTrackr.Quests.Quest do
 
     quest
     |> cast(attrs, [:completion_status, :name, :description, :game_version, :playthrough_url, :modded, :mod_name,
-      :mod_url, :progress_notes, :date_of_start, :date_of_status, :fun_rating, :public])
+      :mod_url, :progress_notes, :date_of_start, :date_of_status, :fun_rating, :difficulty_rating, :public])
     |> validate_required([:completion_status, :name, :public, :date_of_status])
     |> validate_required_modded()
   end

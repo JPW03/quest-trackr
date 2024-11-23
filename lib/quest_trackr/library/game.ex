@@ -1,5 +1,4 @@
 defmodule QuestTrackr.Library.Game do
-  alias QuestTrackr.Repo
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -26,7 +25,7 @@ defmodule QuestTrackr.Library.Game do
     |> cast(attrs, [:play_status, :rating])
     |> unique_constraint([:library_id, :game_id], name: :unique_game_and_library_ids)
     |> validate_required([:play_status])
-    |> validate_inclusion(:play_status, @play_status)
+    |> validate_inclusion(:play_status, @play_status) # TODO verify if this is necessary since the type is enum already
     |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10) # Not doing anything? TODO verify
   end
 
