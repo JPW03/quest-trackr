@@ -21,5 +21,10 @@ defmodule QuestTrackr.Data.Platform do
     platform
     |> cast(attrs, [:igdb_id, :name, :abbreviation, :alternative_name, :logo_image_url])
     |> validate_required([:igdb_id, :name])
+    |> unique_constraint(
+      :igdb_id,
+      message: "A platform in IGDB must correspond to one platform.",
+      name: :unique_api_reference_to_platforms
+    )
   end
 end

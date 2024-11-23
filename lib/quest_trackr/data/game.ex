@@ -46,7 +46,7 @@ defmodule QuestTrackr.Data.Game do
     |> unique_constraint(
       :igdb_id,
       message: "A game in IGDB must correspond to one game.",
-      name: :igdb_id_unique_constraint
+      name: :unique_api_reference_to_games
     )
   end
 
