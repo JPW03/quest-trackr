@@ -9,7 +9,8 @@ defmodule QuestTrackr.Library.Settings do
 
     belongs_to :user, QuestTrackr.Accounts.User
 
-    has_many :games, QuestTrackr.Library.Game, foreign_key: :library_id
+    has_many :owned_games, QuestTrackr.Library.Game, foreign_key: :library_id
+    has_many :games_data, through: [:owned_games, :game]
     has_many :quests, QuestTrackr.Quests.Quest, foreign_key: :library_id
 
     timestamps()

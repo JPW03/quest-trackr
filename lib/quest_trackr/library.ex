@@ -155,11 +155,11 @@ defmodule QuestTrackr.Library do
   alias QuestTrackr.Data
 
   @doc """
-  Returns the list of games_in_library.
+  Returns the list of games in a given Library
 
   ## Examples
 
-      iex> list_games_in_library()
+      iex> list_games_in_library(%Settings{user_id: 123})
       [%Game{}, ...]
 
   """
