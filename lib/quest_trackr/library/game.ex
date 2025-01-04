@@ -6,7 +6,9 @@ defmodule QuestTrackr.Library.Game do
 
   schema "games_in_library" do
     # This schema has an implicit arbitrary ID as the primary key
-    # Using library_id and game_id as a composite key makes associations difficult and queries less efficient
+
+    # The original plan was to have library_id and game_id as a composite key
+    # but that makes associations difficult and queries less efficient
 
     field :play_status, Ecto.Enum, values: @play_status
     field :rating, :decimal
@@ -15,6 +17,7 @@ defmodule QuestTrackr.Library.Game do
     belongs_to :game, QuestTrackr.Data.Game
 
     has_many :quests, QuestTrackr.Quests.Quest, foreign_key: :game_in_library_id
+    has_many :copies, QuestTrackr.Library.GameCopy, foreign_key: :game_in_library_id
 
     timestamps()
   end
