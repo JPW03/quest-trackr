@@ -55,4 +55,24 @@ defmodule QuestTrackr.DataCase do
       end)
     end)
   end
+
+  @doc """
+  A helper which returns true or false if a changeset contains an error for a key
+
+      assert !contains_error(changeset, :name)
+
+  """
+  def contains_error(changeset, key) do
+    match?([_error_message], Map.get(errors_on(changeset), key))
+  end
+
+  @doc """
+  A helper which returns true or false if a changeset contains a change for a field
+
+      assert !contains_change(changeset, :name)
+
+  """
+  def contains_change(changeset, key) do
+    !is_nil(Ecto.Changeset.get_change(changeset, key))
+  end
 end
