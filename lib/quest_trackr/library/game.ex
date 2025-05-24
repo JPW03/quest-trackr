@@ -5,12 +5,7 @@ defmodule QuestTrackr.Library.Game do
   @play_status [:unplayed, :played]
 
   schema "games_in_library" do
-    # This schema has an implicit arbitrary ID as the primary key
-
-    # The original plan was to have library_id and game_id as a composite key
-    # but that makes associations difficult and queries less efficient
-
-    field :play_status, Ecto.Enum, values: @play_status
+    field :play_status, Ecto.Enum, values: @play_status, default: :unplayed
     field :rating, :decimal
 
     belongs_to :library, QuestTrackr.Library.Settings
@@ -22,14 +17,24 @@ defmodule QuestTrackr.Library.Game do
     timestamps()
   end
 
-  @doc false
+  def changeset(game = %{__meta__: %{state: :built}}, attrs) do
+    game
+    |> update_changeset(attrs)
+    |> cast(attrs, [:library_id, :game_id])
+    |> unique_constraint([:library_id, :game_id], name: :unique_game_and_library_ids)
+    |> validate_required([:library_id, :game_id])
+  end
+
   def changeset(game, attrs) do
     game
+    |> update_changeset(attrs)
+  end
+
+  defp update_changeset(game, attrs) do
+    game
     |> cast(attrs, [:play_status, :rating])
-    |> unique_constraint([:library_id, :game_id], name: :unique_game_and_library_ids)
     |> validate_required([:play_status])
-    |> validate_inclusion(:play_status, @play_status) # TODO verify if this is necessary since the type is enum already
-    |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10) # Not doing anything? TODO verify
+    |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10)
   end
 
   def get_play_status_readable(status) do
