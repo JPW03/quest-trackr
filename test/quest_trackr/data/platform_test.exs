@@ -1,5 +1,6 @@
 defmodule QuestTrackr.Data.PlatformTest do
   use QuestTrackr.DataCase, async: true
+  import QuestTrackr.ChangesetHelper
   alias QuestTrackr.Data.Platform
 
   describe "IGDB ID" do

@@ -7,6 +7,8 @@ These tests will focus on testing the changeset function.
 
 Label the schema unit test module with `@moduletag schema_validation`
 
+For helper functions, see [QuestTrackr.ChangesetHelper](./support/changeset_helper.ex)
+
 For each attribute in the schema that is validated in the changeset:
 - Create a describe block with the title of that attribute
 - The describe block should contain test cases for:

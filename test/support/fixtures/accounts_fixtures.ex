@@ -6,7 +6,7 @@ defmodule QuestTrackr.AccountsFixtures do
 
   def unique_user_username, do: "user#{System.unique_integer()}"
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
-  def valid_user_password, do: "hello world!"
+  def valid_user_password, do: "H3ll0 w0r1d!"
 
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{

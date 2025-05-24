@@ -1,5 +1,6 @@
 defmodule QuestTrackr.Data.GameTest do
   use QuestTrackr.DataCase, async: true
+  import QuestTrackr.ChangesetHelper
   alias QuestTrackr.Data.Platform
   alias QuestTrackr.Data.Game
 

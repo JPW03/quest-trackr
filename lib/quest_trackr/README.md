@@ -11,4 +11,14 @@ The only exception to the above rule is data received from the IGDB API.
 
 ## Changeset Rules
 
-For associations, do not use `cast_assoc` as this has the sideeffect of editing the struct to be associated. Prefer `put_assoc` whenever possible.
+Never set `has_many` associations in changesets, set the corresponding `belongs_to` instead.
+
+Always use `_id` fields to deal with associations, the only exception being for `many_to_many` associations.
+
+# Schema Rules
+
+All schemas have an implicit `id` field which acts as the primary key, unless another field is explicitly declared as the primary key.
+
+Although it would be intuitive, do not use composite primary keys, for example making the primary key of `game_in_library` a composite of `library_id` and `game_id`.
+- It causes a lot of compatibility issues with Ecto's functions.
+- It's also generally less efficient from a database query perspective.

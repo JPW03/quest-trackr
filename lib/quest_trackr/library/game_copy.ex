@@ -3,14 +3,17 @@ defmodule QuestTrackr.Library.GameCopy do
   import Ecto.Changeset
 
   @bought_for [:full, :sale, :free, :second_hand, :gift]
-  @ownership_status [:owned, :borrowed, :subscription, :household, :formerly_owned, :streamed, :collection]
+  @ownership_status [
+    :owned,
+    :borrowed,
+    :subscription,
+    :household,
+    :formerly_owned,
+    :streamed,
+    :collection
+  ]
 
   schema "game_copies" do
-    # This schema has an implicit arbitrary ID as the primary key
-
-    # The original plan was to have game_in_library_id and an arbitrary copy_id as a composite key
-    # but that makes associations difficult and queries less efficient
-
     field :emulated, :boolean, default: false
     field :bought_for, Ecto.Enum, values: @bought_for
     field :ownership_status, Ecto.Enum, values: @ownership_status
@@ -23,10 +26,26 @@ defmodule QuestTrackr.Library.GameCopy do
   end
 
   @doc false
+  def changeset(game_copy = %{__meta__: %{state: :built}}, attrs) do
+    game_copy
+    |> update_changeset(attrs)
+    |> cast(attrs, [:game_in_library_id, :collection_id])
+    |> validate_required([:game_in_library_id])
+    |> assoc_constraint(:collection)
+    |> assoc_constraint(:game_in_library)
+  end
+
+  @doc false
   def changeset(game_copy, attrs) do
     game_copy
-    |> cast(attrs, [:emulated, :ownership_status, :bought_for])
-    |> validate_required([:emulated])
+    |> update_changeset(attrs)
+  end
+
+  defp update_changeset(game_copy, attrs) do
+    game_copy
+    |> cast(attrs, [:emulated, :ownership_status, :bought_for, :platform_id])
+    |> validate_required([:emulated, :platform_id])
+    |> assoc_constraint(:platform)
   end
 
   @doc """
@@ -86,5 +105,4 @@ defmodule QuestTrackr.Library.GameCopy do
       nil -> "Can't remember"
     end
   end
-
 end
