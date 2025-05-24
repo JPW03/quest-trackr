@@ -2,10 +2,14 @@ defmodule QuestTrackr.Library.Settings do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @display_types [:shelves, :list]
+  @filters [:none, :name, :rating, :release_date, :platform_name, :last_updated, :play_status]
+  @sort_bys [:name, :rating, :release_date, :platform_name, :last_updated, :play_status]
+
   schema "libraries" do
-    field :default_display_type, Ecto.Enum, values: [:shelves, :list]
-    field :default_filter, Ecto.Enum, values: [:none, :name, :rating, :release_date, :platform_name, :last_updated, :play_status]
-    field :default_sort_by, Ecto.Enum, values: [:name, :rating, :release_date, :platform_name, :last_updated, :play_status]
+    field :default_display_type, Ecto.Enum, values: @display_types
+    field :default_filter, Ecto.Enum, values: @filters
+    field :default_sort_by, Ecto.Enum, values: @sort_bys
 
     belongs_to :user, QuestTrackr.Accounts.User
 
@@ -16,8 +20,20 @@ defmodule QuestTrackr.Library.Settings do
     timestamps()
   end
 
-  @doc false
+  def changeset(settings = %{__meta__: %{state: :built}}, attrs) do
+    settings
+    |> update_changeset(attrs)
+    |> cast(attrs, [:user_id])
+    |> validate_required([:user_id])
+    |> assoc_constraint(:user)
+  end
+
   def changeset(settings, attrs) do
+    settings
+    |> update_changeset(attrs)
+  end
+
+  defp update_changeset(settings, attrs) do
     settings
     |> cast(attrs, [:default_display_type, :default_filter, :default_sort_by])
     |> validate_required([:default_display_type, :default_filter, :default_sort_by])

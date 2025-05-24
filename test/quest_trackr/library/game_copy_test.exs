@@ -6,6 +6,8 @@ defmodule QuestTrackr.Library.GameCopyTest do
   alias QuestTrackr.Data
   alias QuestTrackr.Library
 
+  @moduletag :schema_validation
+
   describe "emulated" do
     test "contains an error if emulated set to nil" do
       changeset = GameCopy.changeset(%GameCopy{}, %{emulated: nil})

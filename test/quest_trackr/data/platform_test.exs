@@ -3,6 +3,8 @@ defmodule QuestTrackr.Data.PlatformTest do
   import QuestTrackr.ChangesetHelper
   alias QuestTrackr.Data.Platform
 
+  @moduletag :schema_validation
+
   describe "IGDB ID" do
     test "contains an error if IGDB ID not present" do
       changeset = Platform.changeset(%Platform{}, %{})
