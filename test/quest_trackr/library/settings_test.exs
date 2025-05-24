@@ -75,5 +75,23 @@ defmodule QuestTrackr.Library.SettingsTest do
 
       assert !contains_change(changeset, :user_id)
     end
+
+    test "contains an error if the user is already associated to a library" do
+      user = AccountsFixtures.user_fixture()
+      library = Repo.insert!(%Settings{id: 1, user_id: user.id})
+
+      valid_settings = %Settings{
+        id: 2,
+        default_display_type: :shelves,
+        default_filter: :name,
+        default_sort_by: :name
+      }
+
+      changeset = Settings.changeset(valid_settings, %{user_id: user.id})
+      # unique constraint requires database interaction
+      {:error, changeset} = Repo.insert(changeset)
+
+      assert "has already been taken" in errors_on(changeset).user_id
+    end
   end
 end

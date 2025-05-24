@@ -25,6 +25,7 @@ defmodule QuestTrackr.Library.Settings do
     |> update_changeset(attrs)
     |> cast(attrs, [:user_id])
     |> validate_required([:user_id])
+    |> unique_constraint(:user_id, name: :unique_user_per_library_settings)
     |> assoc_constraint(:user)
   end
 
