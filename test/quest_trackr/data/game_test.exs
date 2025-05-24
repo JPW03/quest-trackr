@@ -69,27 +69,27 @@ defmodule QuestTrackr.Data.GameTest do
     test "contains an error if no parent_game and is DLC" do
       game =
         Repo.insert!(%Game{id: 1})
-        |> Repo.preload([:platforms, :parent_game])
+        |> Repo.preload([:platforms])
 
       changeset = Game.changeset(game, %{dlc: true})
 
-      assert "can't be blank" in errors_on(changeset).parent_game
+      assert "can't be blank" in errors_on(changeset).parent_game_id
     end
 
     test "contains no error and a change if game is DLC and parent game included" do
       parent_game = Repo.insert!(%Game{id: 1})
-      changeset = Game.changeset(%Game{id: 2}, %{dlc: true, parent_game: parent_game})
+      changeset = Game.changeset(%Game{id: 2}, %{dlc: true, parent_game_id: parent_game.id})
 
-      assert !contains_error(changeset, :parent_game)
-      assert contains_change(changeset, :parent_game)
+      assert !contains_error(changeset, :parent_game_id)
+      assert contains_change(changeset, :parent_game_id)
     end
 
     test "contains no error and no change if game is not DLC and parent game included" do
       parent_game = Repo.insert!(%Game{id: 1})
-      changeset = Game.changeset(%Game{id: 2}, %{dlc: false, parent_game: parent_game})
+      changeset = Game.changeset(%Game{id: 2}, %{dlc: false, parent_game_id: parent_game.id})
 
-      assert !contains_error(changeset, :parent_game)
-      assert !contains_change(changeset, :parent_game)
+      assert !contains_error(changeset, :parent_game_id)
+      assert !contains_change(changeset, :parent_game_id)
     end
   end
 

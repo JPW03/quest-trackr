@@ -66,7 +66,7 @@ defmodule QuestTrackr.Data.Game do
     |> validate_if_dlc(attrs)
     |> unique_constraint(
       :igdb_id,
-      name: "unique_api_reference_to_games",
+      name: :unique_api_reference_to_games,
       message: "the same IGDB game cannot be assigned to multiple QuestTrackr games"
     )
     |> validate_required([:igdb_id, :name, :dlc, :collection])
@@ -74,8 +74,9 @@ defmodule QuestTrackr.Data.Game do
 
   defp validate_if_dlc(changeset, %{dlc: true} = attrs) do
     changeset
-    |> maybe_put_assoc(:parent_game, attrs[:parent_game])
-    |> validate_required([:parent_game])
+    |> cast(attrs, [:parent_game_id])
+    |> validate_required([:parent_game_id])
+    |> assoc_constraint(:parent_game)
   end
 
   defp validate_if_dlc(changeset, _attrs), do: changeset

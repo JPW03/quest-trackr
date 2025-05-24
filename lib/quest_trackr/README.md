@@ -13,7 +13,10 @@ The only exception to the above rule is data received from the IGDB API.
 
 Never set `has_many` associations in changesets, set the corresponding `belongs_to` instead.
 
-Always use `_id` fields to deal with associations, the only exception being for `many_to_many` associations.
+Always use `_id` fields to assign non-many-to-many associations.
+
+For many-to-many associations, assign them via the changeset using `maybe_put_assoc` attaching the list of structs to the attributes passed to the changeset.
+- Avoid using `cast_assoc` as that will modify the structs you are trying to associate to.
 
 # Schema Rules
 
